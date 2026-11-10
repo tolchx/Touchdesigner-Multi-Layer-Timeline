@@ -1,3 +1,37 @@
+# TD-MTL (TouchDesigner 2025+ & TDMCP Fork)
+
+> Fork of [franklin113/Touchdesigner-Multi-Layer-Timeline](https://github.com/franklin113/Touchdesigner-Multi-Layer-Timeline) updated for **TouchDesigner 2025+** (Vulkan GLSL compatibility, fixed timecode caching, timeline segment engine, and clean zero-cue state) with **TDMCP / AgentSDK** automation support.
+
+This document also preserves the original documentation from the upstream `0.74` / pre-1.0 branch below.
+
+## TouchDesigner 2025+ Compatibility Fixes (Verified on Build `2025.32460`)
+
+Opening the original `.toe`/`.tox` components in modern TouchDesigner 2025+ builds introduced Vulkan GLSL and timing regressions that prevented the interface from rendering or playing back properly. The following fixes are applied and saved into `Tox/`:
+
+- **Vulkan Instanced Texturing (`Cues` & `Layers` GLSL MATs):**
+  - Updated `Timeline3D/Cues/phong1GLSL_CueMat` (`Vertex` & `Pixel`) and `Timeline3D/Layers/phong1GLSL_CueMat` (`Vertex` & `Pixel`) from legacy OpenGL bindless handles (`uint64_t` / `TDInstanceTexture2D()`) to Vulkan `flat uint instanceTextureIndex`, `TDInstanceTextureIndex()`, and `TDInstanceTexture(iVert.instanceTextureIndex, ...)`.
+  - Restores track headers (`Layer 0`–`Layer 4`) in `LayerSettings` and cue rendering (thumbnails, titles, selection outlines) in `Timeline3D`.
+- **Zero-Cue Rendering & Warnings (`Cues`):**
+  - Driven `render`, `display`, and `instancing` on `Timeline3D/Cues/geo_Cues` and `geo_Keyframe_Lines` with `op('null_InstanceInfo').numChans > 0` so no uninstanced placeholder box or missing-attribute warnings appear when there are 0 cues.
+- **Timecode & Scrub Bar Labels (`container_Timecode` & `geo_TimeIcons`):**
+  - Rewrote `container_Timecode/CACHE/execute1` (`_populate_cache()` on `onStart` / `onCreate`) to synchronously populate all 60 `tex3d1` slices (`00`–`59` at `256x256`) using `prefill` + `replacesingle` / `replacesinglepulse`, replacing the legacy `delayFrames=300` / `me.time.frame` race that produced empty `128x128` caches. Fixed `cacheOp` → `tex3D` in `CACHE/timer1_callbacks`.
+  - Removed the legacy OpenGL `gl_PointCoord.y` inversion in `Timeline3D/Canvas/geo_TimeIcons/phong4GLSLPixel` and updated `geo_TimeIcons.par.ty` so scrub bar timecode markers render upright and inside the camera frustum.
+- **Scrub Bar Shader Cleanup (`geo_ScrubBar`):**
+  - Removed unused `uShadowStrength` and `uShadowColor` uniform declarations from `Timeline3D/Canvas/geo_ScrubBar/phong2GLSLVertex`.
+- **Timing Engine & Playback (`Time` & `RenderPick`):**
+  - Aligned `Timeline3D/Time/insert1` `contents` with `select_Library` columns (`begin = 0.0`, `length = Timelinelength` for master segment `0`), preventing `timer1` from jumping immediately to `done0 = 1.0` when cues exist.
+  - Fixed `ext.Player.StartPlaying` → `ext.Player.Play` in `Timeline3D/Time/timerCallbacks`.
+  - Added a null guard for `event.selectedOp` in `Tox/Timeline3D/Render Pick/RenderPick.py` (`EventSelectStart`).
+
+## AI Automation & Fork Structure
+
+- [`TDMCP.tox`](TDMCP.tox) & [`.mcp.json`](.mcp.json) — Embedded TDMCP server bridge (`http://127.0.0.1:13316/mcp`) for inspecting and editing the live TouchDesigner network via MCP.
+- [`AgentSDK/`](AgentSDK/) — Python helpers (`TimelineSceneEngine`, `jpshaders_nodes`, `jpshaders_catalog.json`) for scripting scenes, fades, and JPShaders GLSL nodes synchronized with the timeline.
+- [`skills/`](skills/) — Agent skills (`td-multi-layer-timeline`, `td-glsl-jpshaders-expert`, `td-pops-tops-scene-builder`, `td-timeline-scene-orchestrator`).
+- [`docs/TUTORIAL_TRANSCRIPTION.md`](docs/TUTORIAL_TRANSCRIPTION.md) — Technical breakdown and architecture transcription of the TD-MTL tutorial.
+
+---
+
 # TD-MTL
 
 This document is currently actually referencing functionality within the dev branch as I'm preparing to release a 1.0 version.

@@ -22,3 +22,11 @@ SAVES/
 TD_Multi-Layer-Timeline.V*.toe
 *.toe
 TD_Multi-Layer-Timeline.V7.toe
+
+# Runtime caches, Python bytecode, MCP logs, and local scene archives
+__pycache__/
+*.pyc
+.tdmcp/
+.claude/
+.agents/
+Escenas_TD/

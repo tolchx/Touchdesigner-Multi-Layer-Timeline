@@ -124,6 +124,8 @@ class RenderPick:
 		'''
 
 		self.ClickType = int(event.inValues['aux'])
+		if not event.selectedOp:	# sometimes this gets called without an object
+			return
 		selectedOp = event.selectedOp.parent()
 		if not selectedOp:	# sometimes this gets called without an object
 			return

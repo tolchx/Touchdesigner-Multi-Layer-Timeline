@@ -4,7 +4,7 @@
 
 This document also preserves the original documentation from the upstream `0.74` / pre-1.0 branch below.
 
-## TouchDesigner 2025+ Compatibility Fixes (Verified on Build `2025.32460`)
+## TouchDesigner 2025+ Compatibility Fixes (`v0.8`, Verified on Build `2025.32460`)
 
 Opening the original `.toe`/`.tox` components in modern TouchDesigner 2025+ builds introduced Vulkan GLSL and timing regressions that prevented the interface from rendering or playing back properly. The following fixes are applied and saved into `Tox/`:
 
@@ -69,6 +69,8 @@ Tim Franklin
 
 Brian Alexander
 
+Tolch.x
+
 # License:
 TDOO
 
@@ -95,6 +97,14 @@ With A Cue Selected --
 - Ctrl+c - copies the selected cues and pastes them, starting at the playhead.
 - Ctrl+z - Undo After deleting or adding a cue
 # Release History
+
+## 0.8
+### - TouchDesigner 2025+ (Vulkan) & Playback Fixes (Tolch.x)
+- Migrated `Cues` and `Layers` GLSL MATs (`phong1GLSL_CueMat`) to Vulkan `TDInstanceTextureIndex()` / `TDInstanceTexture()`
+- Fixed `container_Timecode` digit cache population (`CACHE/execute1`) and `geo_TimeIcons` Vulkan `gl_PointCoord.y` orientation & camera frustum placement
+- Added zero-cue render/instancing guard on `geo_Cues` and `geo_Keyframe_Lines`
+- Fixed `Time/insert1` segment 0 column alignment, `Time/Player.LoadPreset` channel lookup by name, `StartPlaying` backward-compat alias, `Transport` Play trigger from finished/ready states, and `RenderPick` null selection guard
+- Added TDMCP, `AgentSDK`, and agent skills integration
 
 ## 0.74 
 ### - Snapping

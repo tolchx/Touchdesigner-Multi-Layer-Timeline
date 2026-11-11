@@ -6,9 +6,10 @@ This document serves as the persistent knowledge base and operational manual for
 
 ## 1. Project Overview & Release Files
 
-- **Current Reference File:** `v1.11.toe`
+- **Current Reference File:** `v1.13.toe` (and `v1.12.toe`)
 - **Release Component:** `Release/Multi_Layer_Timeline.tox` (and `Tox/Master/Multi_Layer_Timeline.tox`)
 - **TDMCP Bridge:** `TDMCP.tox` running on port `13316` via native WebSocket/HTTP MCP.
+- **Client Helper:** `scripts/td_client.py` for direct HTTP JSON-RPC execution (`python scripts/td_client.py "<code>"`) with 30s timeout.
 - **Root Component Path:** `/Multi_Layer_Timeline`
 
 ---
@@ -22,10 +23,47 @@ This document serves as the persistent knowledge base and operational manual for
   - `cam_LayerSettings` (`Timeline3D/Render/cam_LayerSettings`): Orthographic camera locked to track headers on the left sidebar.
 - **Picking via `RenderPick`:** User interactions are resolved by querying `instance id` directly on GPU render buffers.
 
-### Dual Output Video Routing & Aspect Ratio
-- Every cue / scene can be routed to **Output 1**, **Output 2**, or both simultaneously.
-- Supported Aspect Ratio modes: `Fit`, `Fill`, `Fill Outside`, and `Custom Resolution`.
-- Preview Monitor (`container_Preview`): Integrated split-screen and full-screen preview switcher (`layout_split`, `switch_preview`).
+### Interactive Editing & Ergonomics (Fase 1)
+- **Razor Tool / Cuchilla (`C` & `btn_Split`):**
+  - Shortcut `c` / `C` and UI button `/Multi_Layer_Timeline/container_Transport/btn_Split` execute `op.Manager.SplitCueAtPlayhead()`.
+  - Splits cue cleanly at playhead or given time into Part A (`[st, splitTime]`) and Part B (`[splitTime, et]`).
+  - Automatically preserves video playback continuity by recalculating `Trimstart = Trimstart + (splitTime - st) * Speed`.
+- **Fast Duplication (`Ctrl + D` & `Alt + Drag`):**
+  - Shortcut `Ctrl + D` executes `DuplicateSelectedCues()`, cloning selected cue(s) contiguously immediately after their end time on their respective layers.
+  - Mouse `Alt + Drag` in `RenderPick.py` instantly clones the clicked cue and drags the clone to a new position.
+- **Dynamic Cursor Feedback:**
+  - `arrowLeftRight` (`↔`) on edge stretch ($\le 6$px or $\ge \text{width} - 6$px).
+  - `arrowAll` (`✥`) on cue body translation / drag.
+  - `pointer` automatically restored on drag release (`EventSelectEnd`).
+- **Color Tagging:**
+  - `Colorpreset` custom menu parameter on all cues (`DefaultBlue`, `EmeraldGreen`, `AmberGold`, `VioletMagenta`, `CrimsonRed`, `CyanElectric`, `DarkSlate`).
+  - Monitored by `parexec_cue_colors` (`parameterexecuteDAT`) which immediately updates `Backgroundcolorr, g, b` driving `geo_Cues` GPU instance colors.
+
+### Professional Output Engine & Render Quality (Fase 2)
+- **Native Spout & NDI Video Outputs:**
+  - `spout_out1`, `spout_out2` (`syphonspoutoutTOP`) and `ndi_out1`, `ndi_out2` (`ndioutTOP`) wired directly to `out1` and `out2` in `/Multi_Layer_Timeline`.
+  - Governed by custom page `Outputs` on the root component with toggle parameters (`Enablespout1`, `Enablespout2`, `Enablendi1`, `Enablendi2`) and configurable stream names.
+- **Hermite Smoothstep Crossfades:**
+  - `playback_engine.py` supports 4 transition curve modes: `Linear`, `Smoothstep` ($3x^2 - 2x^3$), `EaseIn` ($x^2$), and `EaseOut` ($1 - (1-x)^2$).
+  - Per-cue setting via `Fadecurve` menu parameter.
+- **High-Performance 4K Video Buffering:**
+  - Playback slots configured with `prereadframes = 24`, `highperfread = True`, and `alwaysloadinitial = True` to eliminate frame drops and stuttering on 4K multi-layer playback.
+
+### Modulation & Automation Engine (Fase 3)
+- **9-Channel `cue_time` Matrix:**
+  - Generative scenes and video cues receive 9 synchronized real-time modulation channels:
+    1. `active`: 1.0 when playhead intersects cue, 0.0 otherwise.
+    2. `local_seconds`: Cue-relative elapsed time.
+    3. `media_seconds`: Trim- and speed-adjusted media playback time.
+    4. `fraction`: Normalized progress ($0.0 \to 1.0$).
+    5. `length`: Total cue duration in seconds.
+    6. `opacity`: Current evaluated opacity considering fade-in/out and crossfades.
+    7. `curve`: Hermite-evaluated curve value.
+    8. `audio_react`: Normalized real-time peak audio volume from `container_AudioTrack/filter_level`.
+    9. `lfo`: Sinusoidal or cyclical LFO modulation based on `Autospeed`.
+- **Cue Automation Modes:**
+  - Custom parameters: `Automode` (`Off`, `RampUp`, `RampDown`, `Triangle`, `Pulse`, `SineLFO`, `AudioReact`), `Automin`, `Automax`, `Autospeed`.
+  - Default scene creation in `SceneEditor` automatically builds the 9-channel constant CHOP.
 
 ### Dedicated Audio Track Engine (`container_AudioTrack`)
 - **Real-Time GLSL Waveform & Spectrogram:** `glsl_view` renders high-DPI waveform and spectrogram bound directly to `cam1` viewport bounds (`uTimelineView.xy`).

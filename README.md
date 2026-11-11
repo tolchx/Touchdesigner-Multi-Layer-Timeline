@@ -60,6 +60,13 @@ Opening the original `.toe`/`.tox` components in modern TouchDesigner 2025+ buil
   - Aligned `Timeline3D/Time/insert1` `contents` with `select_Library` columns (`begin = 0.0`, `length = Timelinelength` for master segment `0`), preventing `timer1` from jumping immediately to `done0 = 1.0` when cues exist.
   - Fixed `ext.Player.StartPlaying` → `ext.Player.Play` in `Timeline3D/Time/timerCallbacks`.
   - Added null guards in `RenderPick.py`.
+- **Interactive Cue Dragging & Precision Snapping (`RenderPick`):**
+  - Eliminated legacy snapping conflict (`base_Snapping`) that enforced a 5.73s deadzone and fought continuous mouse translation.
+  - Implemented lightweight, adaptive screen-space snapping (~8px) with real-time visual guide (`geo_SnapLine`).
+  - Added parameter change guards in `SetStartTime`, `SetLength`, and `_ProcessVerticalLayerDrag` to prevent redundant parameter cooking during 60 FPS translation.
+- **Rock-Solid 60 FPS Zoom & RangeSlider (`container_RangeSlider`):**
+  - Eliminated Vulkan dynamic texture reallocation traps by replacing dynamic panel resolution with a fixed custom-resolution GLSL shader (`1024x32`) with normalized coordinate uniforms.
+  - Enforced motion guards and zero-overhead layout anchor updates, keeping drag loops strictly under 2 ms/frame at 60 FPS.
 
 ---
 

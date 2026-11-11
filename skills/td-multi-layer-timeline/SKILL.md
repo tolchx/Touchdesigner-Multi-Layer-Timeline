@@ -6,7 +6,7 @@ description: Specialized guide for using, integrating, customizing, and automati
 # TouchDesigner Multi-Layer Timeline (TD-MTL) Skill
 
 ## Overview
-**TD-MTL** is a GPU-accelerated, multi-layer sequencing timeline for TouchDesigner created by Tim Franklin and Brian Alexander. Rather than using conventional heavy 2D UI components, it renders the entire timeline canvas, tracks, and cues in a **3D GPU instanced environment**, delivering high performance (60 fps), precise scrubbing, and multi-track orchestration.
+**TD-MTL** is a GPU-accelerated, multi-layer sequencing timeline for TouchDesigner created by Tim Franklin and Brian Alexander, modernized with advanced live-performance and multi-screen orchestration features. Rather than using conventional heavy 2D UI components, it renders the entire timeline canvas, tracks, and cues in a **3D GPU instanced environment**, delivering high performance (60 fps), precise scrubbing, and multi-track orchestration.
 
 ---
 
@@ -32,6 +32,65 @@ description: Specialized guide for using, integrating, customizing, and automati
     - `normalized time / ramp`: Normalized 0.0 to 1.0 progress for crossfading and parameter animation.
   - Outputs timecodes (`SMPTE / frames / milliseconds`) synchronized across the project.
 
+### 3. Dual-Screen Video Routing & Aspect Ratio System
+- **Output Routing:** Every cue or scene can be independently assigned to **Output 1**, **Output 2**, or both simultaneously.
+- **Aspect Ratio Modes:**
+  - `Fit`: Letterboxed/pillarboxed preserving original aspect ratio.
+  - `Fill`: Stretched to target display resolution.
+  - `Fill Outside`: Scaled to cover the entire canvas without distortion (cropped edges).
+  - `Custom Pixels`: Exact custom resolution mapping.
+- **Preview Monitoring:** `container_Preview` provides an integrated split-screen preview (`switch_preview` / `layout_split`) displaying Output 1 and Output 2 side-by-side or individually.
+
+### 4. Dedicated Audio Track & Visualizer Engine
+- **Component Path:** `/Multi_Layer_Timeline/container_AudioTrack`
+- **Waveform & Spectrogram GLSL Engine:**
+  - `glsl_view`: Procedural shader rendering time-domain waveform and frequency-domain spectrogram in real time with high-DPI resolution.
+  - Viewport coordinates (`uTimelineView.xy`) automatically bind to `cam1` zoom and pan coordinates for pixel-perfect scrub alignment.
+- **Stereo Metering & Level Control:**
+  - `meter_comp`: Hardware-accelerated stereo peak meter with peak hold indicators.
+  - Gain and panning controlled through `math_gain` and `math_pan`.
+  - Solo, Mute, and dynamic playhead scrubbing synchronization.
+- **Auto-Fit Timeline Duration:**
+  - Automatically analyzes loaded audio files and sets `Timeline.par.Duration` to match the exact duration of the audio, preventing truncated playback.
+
+---
+
+## Performance Engineering & Vulkan Contracts (60 FPS Guaranteed)
+
+### 1. The Vulkan Dynamic Texture Reallocation Trap
+- **Antipattern:** Setting `outputresolution = parpanel` on TOPs inside Container COMPs whose width or height changes interactively (such as sliders, range bars, splitters, or resizable panels).
+- **Why it Fails:** In TouchDesigner 2025+ (Vulkan), every pixel change triggers texture destruction (`vkDestroyImage`, `vkFreeMemory`) and new texture allocation (`vkCreateImage`, `vkAllocateMemory`). At 60 Hz, this causes massive GPU pipeline flushes and drops frame rates from 60 to 15 FPS.
+- **Contract / Solution (Fixed-Resolution Shader Pattern):**
+  - UI TOPs must use a **fixed custom resolution** (e.g. `512x32`) with `outputresolution = custom`.
+  - Parent Container COMP sets `topfill = horizontal` (or `stretch`).
+  - Pass the panel's physical width as a uniform float `uParams.x = parent().width`.
+  - In GLSL, compute pixel coordinates as `float px = vUV.st.x * uParams.x;`.
+  - Handles, borders, and grips are evaluated in pixel space in GLSL.
+  - **Result:** 0 texture reallocations, 0.01 ms GPU cook time, rock-solid 60 FPS.
+
+### 2. Synchronous Panel Layout Stall in Python
+- **Antipattern:** Reading `.width` or `.height` on a Container COMP inside per-frame scripts (`whileOn`, mouse drag callbacks) right after setting parameters or anchors (e.g. `parent().par.Sliderwidth.val = self.Bar.width`).
+- **Why it Fails:** Reading layout attributes mid-frame forces TouchDesigner to synchronously solve the CPU layout hierarchy, interrupting the render loop.
+- **Contract / Solution:** Never query `.width` or `.height` inside `whileOn` loops for unused parameters. Compute widths procedurally from normalized coordinates (`parent(2).width * (rAnchor - lAnchor)`), or read it once on mouse-down (`onOffToOn`).
+
+### 3. Redundant Parameter Dirtying (`whileOn` Motion Guard)
+- **Antipattern:** Calling parameter modifications in `whileOn` callbacks every frame even when the mouse is stationary.
+- **Contract / Solution:** Always implement a motion guard:
+  ```python
+  currentU = self.ownerComp.panel.insideu.val
+  if self._lastU is not None and abs(currentU - self._lastU) < 1e-6:
+      return
+  self._lastU = currentU
+  ```
+  Reset `_lastU = None` in `onOffToOn` and `onOnToOff`.
+
+### 4. Interactive Cue Trimming & Dragging (`Transformer.py`)
+- **Dual-Edge Trimming:**
+  - Left edge drag ($\le 6$ px): Trims cue start time without moving end time (`CanStretchLeft`).
+  - Right edge drag ($\ge \text{width} - 6$ px): Trims cue duration (`CanStretch`).
+  - Body drag: Moves the entire cue across time and layers.
+- **Click Precedence:** Edge clicks must strictly supersede scene button triggers (`is_scene_btn = False`) to prevent accidental editor window launches during cue resizing.
+
 ---
 
 ## Component Layout & File Map
@@ -41,6 +100,7 @@ Touchdesigner-Multi-Layer-Timeline/
 ├── Release/
 │   └── Multi_Layer_Timeline.tox     # Self-contained master component (drag & drop into TD)
 ├── TD_Multi-Layer-Timeline.V7.toe   # Reference master project
+├── v1.11.toe                        # Current production release TOE
 ├── Tox/
 │   ├── Master/                      # Master timeline container and subcomponents
 │   ├── Timeline3D/
@@ -49,7 +109,7 @@ Touchdesigner-Multi-Layer-Timeline/
 │   │   ├── Render Pick/             # Mouse interaction: Bounds, Transformer, Snapper, Selection
 │   │   ├── Time/                    # Segment DAT builder & Timer CHOP transport
 │   │   ├── Layers/                  # Track definitions & layer properties
-│   │   └── Playback/                # Playback state sync
+│   │   └── Playback/                # Playback state sync & dual output routing
 │   ├── Callbacks/
 │   │   └── Main_Callbacks_Template.py # Hook script for application triggers
 │   └── Transport/                   # Transport bar controls (Play, Pause, Stop, Scrub)
@@ -70,51 +130,24 @@ Each cue instance stores:
 - `Layer`: Zero-based track index
 - `Backgroundcolor`: RGBA tuple
 - `Imagefile` / `Thumbnail`: Media asset reference path
+- `Output`: `1` (Output 1) or `2` (Output 2)
+- `Aspect`: `'fit'`, `'fill'`, `'fill_outside'`, or `'custom'`
 
 ### Adding & Modifying Cues via Python
-Inside TouchDesigner (or via TDMCP `run_python`):
 ```python
-# Access the Manager extension
-manager = op('Multi_Layer_Timeline').op('Project').ext.Manager
+manager = op('/Multi_Layer_Timeline/Timeline3D/Project').ext.Manager
 
-# Create a cue using a CueSpec
-spec = op('Multi_Layer_Timeline').op('Project').mod.CueSpec.CueSpec(
-    Title='IntroClip',
+spec = op('/Multi_Layer_Timeline/Timeline3D/Project').mod.CueSpec.CueSpec(
+    Title='StageVisual',
     Cuetype='Media',
     Starttime=0.0,
-    Cuelength=10.0,
+    Cuelength=12.0,
     Fadeinoutduration=(1.0, 1.0),
     Layer=0,
-    Backgroundcolor=(0.2, 0.6, 0.9, 1.0)
+    Backgroundcolor=(0.15, 0.45, 0.85, 1.0)
 )
 
-manager.AddCue(cueType='Media', name='cue_intro', cueSpec=spec)
-```
-
----
-
-## Connecting Playback to TouchDesigner Networks
-
-### 1. Video / Media Compositing
-1. Route the `Segment DAT` or `Time` component CHOP outputs into your media player block.
-2. Use the `preload` pulse to cue a `Movie File In TOP` before playback arrives at the cut point.
-3. Drive the `opacity` or `cross TOP` blend parameter using the fade ramp channel (`0.0 -> 1.0`).
-
-### 2. External Commands (OSC, DMX, MIDI, Python)
-Implement callback logic inside `Main_Callbacks_Template.py`:
-```python
-def OnPlayStateChange(value):
-    # 0: Stop, 1: Play, 2: Pause
-    if value == 1:
-        op('d鐘_out').sendOSC('/transport/play', [1])
-    elif value == 0:
-        op('d鐘_out').sendOSC('/transport/stop', [1])
-
-def OnCueTrigger(cueInfo):
-    # Fired when playhead crosses a cue start
-    cueType = cueInfo.get('type')
-    if cueType == 'OSC':
-        op('oscout1').sendOSC(cueInfo['address'], cueInfo['args'])
+manager.AddCue(cueType='Media', name='cue_visual1', cueSpec=spec)
 ```
 
 ---
@@ -123,8 +156,10 @@ def OnCueTrigger(cueInfo):
 
 | Action | Shortcut |
 | :--- | :--- |
-| **Zoom In / Out** | `Alt + Mouse Wheel` or `Ctrl + + / -` |
-| **Pan Canvas** | `Shift + Mouse Wheel` (horizontal) / `Mouse Wheel` (vertical) |
+| **Zoom In / Out** | Range slider right/left handles, `Alt + Mouse Wheel`, or `Ctrl + + / -` |
+| **Pan Canvas** | Range slider center track, `Shift + Mouse Wheel` (horizontal) / `Mouse Wheel` (vertical) |
+| **Trim Cue Start** | Click & drag within 6px of the left edge of a cue |
+| **Trim Cue End** | Click & drag within 6px of the right edge of a cue |
 | **Multi-Select** | Hold `Shift` while clicking cues |
 | **Snap to Playhead** | Hold `Ctrl + Alt` while dragging a cue |
 | **Snap to Increments** | Hold `Ctrl` while dragging a cue |
@@ -137,10 +172,11 @@ def OnCueTrigger(cueInfo):
 ## Automation via TDMCP (Agent Operations)
 
 When `TDMCP.tox` is active on port `13316`:
-1. **Inspect Timeline State:**
-   - Query operators: `mcp_touchdesigner_get_operator(path='/project1/Multi_Layer_Timeline')`
-   - Read cue table: `mcp_touchdesigner_get_dat_content(path='/project1/Multi_Layer_Timeline/Project/table_cues')`
-2. **Control Transport Remotely:**
-   - Pulse play/pause: `mcp_touchdesigner_pulse_parameter(path='/project1/Multi_Layer_Timeline/Transport', parameter='Play')`
-3. **Automate Cue Generation:**
-   - Run Python snippets via `mcp_touchdesigner_run_python` to script bulk cue placements from external timelines (EDL, CSV, JSON).
+1. **Inspect Errors:**
+   `mcp_touchdesigner_get_errors(path='/', recurse=True)`
+2. **Execute Verified Python:**
+   `mcp_touchdesigner_execute_code(code="...")`
+3. **Inspect Performance:**
+   `mcp_touchdesigner_get_cook_performance(path='/Multi_Layer_Timeline')`
+4. **Bottom-Up TOX & TOE Saving:**
+   Always save modified subcomponents, then `Multi_Layer_Timeline.tox`, then named `.toe`.

@@ -61,6 +61,20 @@ def onKey(dat, key, character, alt, lAlt, rAlt, ctrl, lCtrl, rCtrl, shift, lShif
         _center_playhead_view()
         return
 
+    # Markers: Add Marker at playhead ('m' or 'M')
+    if key in ['m', 'M'] and not ctrl and not alt:
+        markers_comp = parent.Main.op('Markers')
+        if markers_comp and hasattr(markers_comp.ext, 'Markers'):
+            markers_comp.ext.Markers.AddMarker()
+        return
+
+    # Markers: GO trigger on Enter / Return
+    if key in ['return', 'enter']:
+        markers_comp = parent.Main.op('Markers')
+        if markers_comp and hasattr(markers_comp.ext, 'Markers'):
+            markers_comp.ext.Markers.TriggerGo()
+        return
+
     # Space: Play/Pause toggle
     if key == 'space':
         time_comp = parent.Main.op('Time')
@@ -68,19 +82,27 @@ def onKey(dat, key, character, alt, lAlt, rAlt, ctrl, lCtrl, rCtrl, shift, lShif
             time_comp.TogglePlay()
         return
 
-    # Left / Right arrows: Frame stepping
+    # Left / Right arrows: Frame stepping or Marker jumping with Shift
     if key == 'left':
-        step = -5 if shift else -1
-        time_comp = parent.Main.op('Time')
-        if time_comp and hasattr(time_comp, 'StepFrame'):
-            time_comp.StepFrame(step)
+        if shift:
+            markers_comp = parent.Main.op('Markers')
+            if markers_comp and hasattr(markers_comp.ext, 'Markers'):
+                markers_comp.ext.Markers.PrevMarker()
+        else:
+            time_comp = parent.Main.op('Time')
+            if time_comp and hasattr(time_comp, 'StepFrame'):
+                time_comp.StepFrame(-1)
         return
 
     if key == 'right':
-        step = 5 if shift else 1
-        time_comp = parent.Main.op('Time')
-        if time_comp and hasattr(time_comp, 'StepFrame'):
-            time_comp.StepFrame(step)
+        if shift:
+            markers_comp = parent.Main.op('Markers')
+            if markers_comp and hasattr(markers_comp.ext, 'Markers'):
+                markers_comp.ext.Markers.NextMarker()
+        else:
+            time_comp = parent.Main.op('Time')
+            if time_comp and hasattr(time_comp, 'StepFrame'):
+                time_comp.StepFrame(1)
         return
 
     return

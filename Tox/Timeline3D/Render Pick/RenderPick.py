@@ -400,6 +400,18 @@ class RenderPick:
 				self.CanDragVertically = True
 				self.CanTranslate = True
 
+			# Enforce Layer Lock
+			if selectedItem and hasattr(selectedItem.par, 'Layer'):
+				layer_num = int(selectedItem.par.Layer.eval())
+				layers_comp = self.MainOp.op('Layers')
+				if layers_comp:
+					lop = layers_comp.op(f'base_Layer{layer_num}')
+					if lop and hasattr(lop.par, 'Lock') and lop.par.Lock.eval():
+						self.CanStretch = False
+						self.CanStretchLeft = False
+						self.CanDragVertically = False
+						self.CanTranslate = False
+
 		elif 'Layer' in selectedOp.tags:
 			tag = 'Layer'
 			objPrefix = self.ObjectPrefix[tag]

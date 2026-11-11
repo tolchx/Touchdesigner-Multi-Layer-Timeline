@@ -6,7 +6,7 @@ This document serves as the persistent knowledge base and operational manual for
 
 ## 1. Project Overview & Release Files
 
-- **Current Reference File:** `v1.13.toe` (and `v1.12.toe`)
+- **Current Reference File:** `v1.14.toe` (and `v1.13.toe`)
 - **Release Component:** `Release/Multi_Layer_Timeline.tox` (and `Tox/Master/Multi_Layer_Timeline.tox`)
 - **TDMCP Bridge:** `TDMCP.tox` running on port `13316` via native WebSocket/HTTP MCP.
 - **Client Helper:** `scripts/td_client.py` for direct HTTP JSON-RPC execution (`python scripts/td_client.py "<code>"`) with 30s timeout.
@@ -22,6 +22,37 @@ This document serves as the persistent knowledge base and operational manual for
   - `cam1` (`Timeline3D/Render/cam1`): Main timeline camera. Controls horizontal zoom/pan (`tx`, `sx`) and vertical scroll (`ty`).
   - `cam_LayerSettings` (`Timeline3D/Render/cam_LayerSettings`): Orthographic camera locked to track headers on the left sidebar.
 - **Picking via `RenderPick`:** User interactions are resolved by querying `instance id` directly on GPU render buffers.
+
+### Show Control & External Automation (Fase 4)
+- **Bidirectional OSC (`Timeline3D/Input/OSC`):**
+  - Serves OSC messages on port 7000, transmits real-time feedback (timecode, state, fraction, seconds) to port 7001 for Bitfocus Companion and StreamDeck.
+  - Native `osc_handler.py` and `osc_feedback.py`.
+- **Hardware MIDI Mapping (`Timeline3D/Input/MIDI`):**
+  - Maps APC40, nanoKONTROL, and X-Touch hardware notes and CC faders to transport, layer opacities, master audio, and frame stepping.
+
+### Marker Track & Show Logic (Fase 5)
+- **Marker Engine (`Timeline3D/Markers`):**
+  - Table-driven marker system (`table_Markers`) with action types: `Continue`, `Pause` (*Wait-for-Go*), `Loop`, and `Jump`.
+  - Frame-accurate crossing monitor via `chopexec_monitor` calling `CheckMarkerCrossing`.
+  - Keyboard shortcuts: `M` creates marker at playhead, `Shift + Left / Right` jumps between markers, `Enter` triggers `GO`.
+  - Transport UI: `btn_GO` and `btn_Marker` in `container_Transport`.
+
+### Professional Layer Headers (Fase 6)
+- **Layer Parameters:** `Mute`, `Solo`, `Lock`, `Opacity`, `Blendmode` on `Template_layer1` and `base_Layer*`.
+- **Playback Compositing Integration:** `playback_engine.py` evaluates layer `Mute`, `Solo`, and scales `Opacity`.
+- **Interaction Lock:** `RenderPick.py` checks layer `Lock` and disables translation, stretching, and edge dragging for locked cues.
+
+### Media Inspector & Codec Advisor (Fase 7)
+- **Asset Manager (`Timeline3D/Assets`):**
+  - Scans all cues for missing files (`os.path.exists`), reports missing count and warnings.
+  - Inspects video codecs, warning against CPU-heavy H.264/HEVC and validating optimal GPU formats (HAP, NotchLC, Apple ProRes).
+  - Batch relinking function: `RelinkFolder(new_path)`.
+
+### Web Remote Control for Tablet / iPad (Fase 8)
+- **HTML5 Web App (`Timeline3D/WebRemote`):**
+  - Served on port 8080 by native `webserverDAT` (`webserver1`).
+  - Self-contained offline dark-mode touch interface with big tactile GO/PAUSE/STOP buttons, digital timecode clock, marker jumper carousel, and layer faders.
+  - Bidirectional communication via WebSockets (`/ws`) and REST JSON API (`/api/status`, `/api/action`).
 
 ### Interactive Editing & Ergonomics (Fase 1)
 - **Razor Tool / Cuchilla (`C` & `btn_Split`):**

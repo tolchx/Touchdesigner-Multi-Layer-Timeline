@@ -626,6 +626,27 @@ def update_playback():
         fade_out = _apply_fade_curve(rem_t / fo, fade_mode) if fo > 1e-6 else 1.0
         opacity = max(0.0, min(1.0, min(fade_in, fade_out)))
 
+        # Layer evaluation: Mute, Solo, and Layer Opacity
+        layer_num = int(cue.par.Layer.eval()) if hasattr(cue.par, 'Layer') else 0
+        layer_opacity = 1.0
+        mlt_root = parent.Timeline if hasattr(parent, 'Timeline') else op('/Multi_Layer_Timeline')
+        layers_comp = mlt_root.op('Timeline3D/Layers') if mlt_root else None
+        if layers_comp:
+            layer_op = layers_comp.op(f'base_Layer{layer_num}')
+            if layer_op:
+                if hasattr(layer_op.par, 'Mute') and layer_op.par.Mute.eval():
+                    layer_opacity = 0.0
+                elif hasattr(layer_op.par, 'Solo'):
+                    any_solo = any(bool(l.par.Solo.eval()) for l in layers_comp.children if l.name.startswith('base_Layer') and hasattr(l.par, 'Solo'))
+                    if any_solo and not bool(layer_op.par.Solo.eval()):
+                        layer_opacity = 0.0
+                    else:
+                        layer_opacity = float(layer_op.par.Opacity.eval()) if hasattr(layer_op.par, 'Opacity') else 1.0
+                else:
+                    layer_opacity = float(layer_op.par.Opacity.eval()) if hasattr(layer_op.par, 'Opacity') else 1.0
+
+        opacity = opacity * max(0.0, min(1.0, layer_opacity))
+
         cue_type = str(cue.par.Type.eval() or '') if hasattr(cue.par, 'Type') else ''
 
         # Audio Clip handling per layer

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TD-MTL Web Remote</title>
+<style>
+  :root {
+    --bg-dark: #0f1117;
+    --card-bg: #1a1e29;
+    --border: #2b3245;
+    --accent-green: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-blue: #3b82f6;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg-dark);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 16px;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow-x: hidden;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; }
+  .badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: #374151;
+    color: #e5e7eb;
+  }
+  .badge.playing { background: var(--accent-green); color: #064e3b; animation: pulse 2s infinite; }
+  .badge.paused { background: var(--accent-amber); color: #78350f; }
+  .badge.stopped { background: #4b5563; color: #d1d5db; }
+  @keyframes pulse { 0% { opacity: 0.85; } 50% { opacity: 1; } 100% { opacity: 0.85; } }
+
+  .clock-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .timecode {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #ffffff;
+    margin-bottom: 4px;
+  }
+  .section-name {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 14px;
+  }
+  .progress-wrap {
+    width: 100%;
+    height: 8px;
+    background: #283042;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    transition: width 0.1s linear;
+  }
+
+  .transport-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .btn {
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.08s ease, filter 0.08s ease;
+    touch-action: manipulation;
+  }
+  .btn:active { transform: scale(0.96); filter: brightness(1.2); }
+  .btn-go {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #ffffff;
+    min-height: 88px;
+    font-size: 1.8rem;
+    letter-spacing: 1.5px;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+  }
+  .btn-pause {
+    background: #374151;
+    color: var(--accent-amber);
+    border: 1px solid #4b5563;
+    font-size: 1.1rem;
+    min-height: 88px;
+  }
+  .btn-stop {
+    background: #374151;
+    color: var(--accent-red);
+    border: 1px solid #4b5563;
+    font-size: 1.1rem;
+    min-height: 88px;
+  }
+
+  .nav-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .btn-nav {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  .markers-list {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+  }
+  .marker-chip {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .marker-chip:active { background: #2b3245; }
+
+  .layers-container {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .layer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #232838;
+  }
+  .layer-row:last-child { border-bottom: none; }
+  .layer-info { width: 90px; font-size: 0.85rem; font-weight: 600; }
+  .layer-fader {
+    flex: 1;
+    margin: 0 14px;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #374151;
+    outline: none;
+  }
+  .layer-fader::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-blue);
+    cursor: pointer;
+  }
+  .btn-mute {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+    border: 1px solid #4b5563;
+    background: #283042;
+    color: #e5e7eb;
+    cursor: pointer;
+  }
+  .btn-mute.active { background: var(--accent-red); color: #fff; border-color: var(--accent-red); }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>TD-MTL Remote</h1>
+    <div id="statusBadge" class="badge stopped">STOPPED</div>
+  </div>
+
+  <div class="clock-card">
+    <div id="timecodeDisplay" class="timecode">00:00:00:00</div>
+    <div id="sectionDisplay" class="section-name">Marker: None</div>
+    <div class="progress-wrap" onclick="seekClick(event)">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
+  </div>
+
+  <div class="transport-grid">
+    <button class="btn btn-go" onclick="sendAction('go')">GO</button>
+    <button class="btn btn-pause" onclick="sendAction('pause')">PAUSE</button>
+    <button class="btn btn-stop" onclick="sendAction('stop')">STOP</button>
+  </div>
+
+  <div class="nav-grid">
+    <button class="btn btn-nav" onclick="sendAction('prev_marker')">◀ PREV MARKER</button>
+    <button class="btn btn-nav" onclick="sendAction('next_marker')">NEXT MARKER ▶</button>
+  </div>
+
+  <div class="section-title">Marcadores de Show</div>
+  <div id="markersList" class="markers-list">
+    <div class="marker-chip" style="color: #6b7280;">Cargando marcadores...</div>
+  </div>
+
+  <div class="section-title">Control de Capas</div>
+  <div id="layersContainer" class="layers-container">
+    <div style="font-size: 0.85rem; color: #6b7280;">Cargando capas...</div>
+  </div>
+
+<script>
+  let totalDuration = 30.0;
+  let ws = null;
+
+  function connectWS() {
+    const loc = window.location;
+    const wsUri = (loc.protocol === "https:" ? "wss://" : "ws://") + loc.host + "/ws";
+    ws = new WebSocket(wsUri);
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "status") {
+          updateUI(msg);
+        }
+      } catch (e) { }
+    };
+
+    ws.onclose = () => {
+      setTimeout(connectWS, 1500);
+    };
+  }
+
+  function sendAction(action, payload = {}) {
+    payload.action = action;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(payload));
+    } else {
+      fetch("/api/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(e => console.error(e));
+    }
+  }
+
+  function seekClick(event) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const frac = Math.max(0.0, Math.min(1.0, (event.clientX - rect.left) / rect.width));
+    sendAction("goto_fraction", { fraction: frac });
+  }
+
+  function updateUI(data) {
+    // 1. Badge & State
+    const badge = document.getElementById("statusBadge");
+    badge.className = "badge " + (data.state_str || "stopped").toLowerCase();
+    badge.textContent = data.state_str || "STOPPED";
+
+    // 2. Timecode
+    document.getElementById("timecodeDisplay").textContent = data.timecode || "00:00:00:00";
+    totalDuration = data.duration || 30.0;
+    const pct = Math.max(0, Math.min(100, (data.fraction || 0) * 100));
+    document.getElementById("progressFill").style.width = pct + "%";
+
+    // 3. Section
+    if (data.current_marker) {
+      document.getElementById("sectionDisplay").textContent = "Marker: " + data.current_marker;
+    }
+
+    // 4. Markers List
+    if (data.markers && Array.isArray(data.markers)) {
+      const ml = document.getElementById("markersList");
+      ml.innerHTML = "";
+      data.markers.forEach(m => {
+        const chip = document.createElement("div");
+        chip.className = "marker-chip";
+        chip.textContent = m.name + " (" + Number(m.time).toFixed(1) + "s)";
+        chip.onclick = () => sendAction("jump_marker", { target: m.name });
+        ml.appendChild(chip);
+      });
+    }
+
+    // 5. Layers
+    if (data.layers && Array.isArray(data.layers)) {
+      const lc = document.getElementById("layersContainer");
+      lc.innerHTML = "";
+      data.layers.forEach((l, idx) => {
+        const row = document.createElement("div");
+        row.className = "layer-row";
+        row.innerHTML = `
+          <div class="layer-info">${l.name || 'Capa ' + idx}</div>
+          <input type="range" class="layer-fader" min="0" max="100" value="${Math.round((l.opacity || 1.0) * 100)}" 
+                 oninput="sendAction('layer_opacity', { layer: ${idx}, value: this.value / 100 })">
+          <button class="btn-mute ${l.mute ? 'active' : ''}" 
+                  onclick="sendAction('layer_mute', { layer: ${idx}, state: ${!l.mute} })">MUTE</button>
+        `;
+        lc.appendChild(row);
+      });
+    }
+  }
+
+  // Poll fallback if websocket is pending
+  setInterval(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      fetch("/api/status")
+        .then(r => r.json())
+        .then(data => updateUI(data))
+        .catch(e => { });
+    }
+  }, 500);
+
+  connectWS();
+</script>
+</body>
+</html>

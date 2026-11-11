@@ -1,115 +1,150 @@
 # TD-MTL (TouchDesigner 2025+ & TDMCP Fork)
 
-> Fork of [franklin113/Touchdesigner-Multi-Layer-Timeline](https://github.com/franklin113/Touchdesigner-Multi-Layer-Timeline) updated for **TouchDesigner 2025+** (Vulkan GLSL compatibility, fixed timecode caching, timeline segment engine, clean zero-cue state) with **TDMCP / AgentSDK** automation support, **Dual Independent Video Outputs**, **Audio Track with Waveform Visualizer & Auto-Fit**, and **Enhanced 60 FPS GPU Interactive Cue Dragging & Edge Trimming**.
+> Fork of [franklin113/Touchdesigner-Multi-Layer-Timeline](https://github.com/franklin113/Touchdesigner-Multi-Layer-Timeline) updated for **TouchDesigner 2025+** (Vulkan GLSL compatibility, fixed timecode caching, timeline segment engine, clean zero-cue state) with **TDMCP / AgentSDK** automation support, **Dual Independent Video Outputs**, **Spout & NDI Streams**, **Hermite Smoothstep Crossfades**, **Show Control (OSC & MIDI)**, **Marker Track & Wait-for-Go Logic**, **Professional Layer Headers (Mute/Solo/Lock)**, **Asset Manager & Codec Advisor**, and **Web Remote Control for Tablet / iPad**.
 
 ---
 
-## What's New in `v1.10` (TouchDesigner 2025+ Verified)
+## Production Suite Overview (`v1.14` — TouchDesigner 2025+ Verified)
 
-### 1. Dual Independent Video Outputs (Multi-Screen Projection)
-- **Per-Cue & Per-Layer Output Routing:** Route individual cues or entire layers to `out1` (Output 1), `out2` (Output 2), or `both` (simultaneous multi-screen projection).
-- **Independent Aspect Ratios & Fit Modes:**
-  - Presets: `16:9`, `16:10`, `4:3`, `21:9`, `9:16`, `1:1`, and `Custom` (with user-defined pixel resolution `Customw` x `Customh`).
-  - Fit modes: `fit` (Fit Best / Letterbox), `fill` (Fit Outside / Crop), `fitoutside`, and `native` (Native resolution).
-- **GUI Preview Switcher:** One-click preview toggle buttons (`[OUT 1]`, `[OUT 2]`, `[SPLIT]`) with live status in the timeline header.
-- **Physical Display Outputs:** Master-level `out1` and `out2` TOPs ready for Window COMP routing to separate physical projectors or LED screens.
-
-### 2. Audio Track, Live Waveform & Timeline Auto-Fit
-- **Dedicated Audio Header & Track:** Audio track strip with volume fader, live stereo VU meters, Mute, Solo, and Pan controls.
-- **GLSL Visualizer Modes:** Switch between `Waveform`, `Spectrogram`, and `Lissajous` visualizations.
-- **Duration Auto-Fit:** Automatically scales the entire timeline duration (`Timelinelength`) to perfectly match the loaded audio file without clipping.
-
-### 3. Smooth 60 FPS GPU Interactive Dragging & Dual-Edge Trimming
-- **RenderPick Continuous Streaming:** Switched `renderpick1.par.strategy` to `select` (*While Select*), ensuring fluid 60 FPS coordinate streaming during mouse interaction.
-- **Dual-Edge Trimming:**
-  - **Right-Edge Stretch:** Drag the right handle to adjust cue duration (`Cuelength`) while keeping the start time fixed.
-  - **Left-Edge Stretch:** Drag the left handle to adjust start time (`Starttime`) and duration while keeping the end time fixed.
-- **World-Space Scale-Independent Calculations:** Edge detection evaluates directly in seconds, immune to camera zoom, window scaling, or DPI mismatches.
-- **Vertical Layer Transitions:** Procedural layer calculation using `Computedlowerbounds` and `Computedlayerheight` relative to the initial touch layer, providing responsive, jitter-free layer switching with boundary protection.
-- **Magnetic Snapping:** Snaps cue boundaries to the playhead, subrange markers, and neighboring cues with real-time `geo_SnapLine` visual feedback.
-- **Self-Healing Selection:** Upgraded `Selection.py` (`DoSelection`) to guarantee clean single-cue white selection outlines and eliminate duplicate selection artifacts.
-
-### 4. TimeBase Parity Features
-- **Subrange Playback:** Define In/Out boundaries (`Subrangein`, `Subrangeout`, `Enablesubrange`) for looped rehearsal or section editing.
-- **Frame-Accurate Stepping:** Dedicated `±1F` buttons and `Left`/`Right` arrow shortcuts for single-frame precision.
-- **Navigation Shortcuts:** `Home` (go to start / 0s) and `Goto` timecode jump.
-- **Per-Cue Looping:** Individual cue loop toggle (`Loopcue`).
-- **Movie Trim & Playback Speed:** In-cue video trimming (`Trimstart`, `Trimend`) and variable playback `Speed` multiplier.
-- **Extended Cue Types:** Support for Media, Tox, TCP/IP, OSC, Text, Event, and Audio cues.
-- **JSON Show Serializer:** Portable show export and import (`Shows/show_default.json`) for backing up and transferring multi-track shows.
-
-### 5. Inline Renaming
-- **Track Renaming:** Double-click any layer track header in `LayerSettings` to edit track names inline.
-- **Cue Renaming:** Double-click any cue in `Timeline3D` to rename cues directly on the timeline canvas.
+```
+                       ┌─────────────────────────────────────────────────────────┐
+                       │           Multi_Layer_Timeline (Root Component)         │
+                       └─────────────────────────────────────────────────────────┘
+                                   │                              │
+         ┌─────────────────────────┴──────────────┐   ┌───────────┴────────────────────────┐
+         │         Timeline3D Rendering Engine    │   │         Show Control & Outputs     │
+         ├────────────────────────────────────────┤   ├────────────────────────────────────┤
+         │ • 3D GPU Instancing (geo_Cues, Layers) │   │ • Dual Video Outputs (out1, out2)  │
+         │ • RenderPick Continuous Streaming      │   │ • Native Spout (spout1, spout2)    │
+         │ • Dual-Edge Trimming (Left/Right)      │   │ • Native NDI (ndi1, ndi2)          │
+         │ • Razor Tool (C / btn_Split)           │   │ • Bidirectional OSC (Port 7000/7001│
+         │ • Fast Duplication (Ctrl+D, Alt+Drag)  │   │ • Hardware MIDI Mapping (CC/Notes) │
+         │ • Color Tagging (7 Color Presets)      │   │ • Web Remote (HTML5 / Port 8080)   │
+         │ • Marker Track (Wait-for-Go / Loops)   │   │ • Hermite Smoothstep Crossfades    │
+         │ • Layer Headers (Mute / Solo / Lock)   │   │ • 4K High-Perf Buffering (24 frms) │
+         └────────────────────────────────────────┘   └────────────────────────────────────┘
+```
 
 ---
 
-## TouchDesigner 2025+ Compatibility Fixes (`v0.8`, Build `2025.32460`)
+## Feature Matrix & Architectural Systems
 
-Opening the original `.toe`/`.tox` components in modern TouchDesigner 2025+ builds introduced Vulkan GLSL and timing regressions. The following foundational fixes were applied:
+### 1. Show Control & External Automation (OSC & MIDI)
+- **Bidirectional OSC Engine (`Timeline3D/Input/OSC`):**
+  - Ports: Default Input `7000`, Feedback Output `7001` (configurable on page `Show Control`).
+  - **Commands:** `/timeline/play`, `/timeline/pause`, `/timeline/stop`, `/timeline/toggle_play`, `/timeline/goto [sec]`, `/timeline/goto_fraction [0..1]`, `/timeline/step [frames]`, `/timeline/split`, `/timeline/duplicate`, `/timeline/go`, `/timeline/marker/jump [name]`, `/timeline/layer/mute`, `/timeline/layer/solo`, `/timeline/layer/opacity`.
+  - **Companion / StreamDeck Feedback:** Continuous high-DPI feedback (`/timeline/timecode`, `/timeline/state`, `/timeline/state_str`, `/timeline/seconds`, `/timeline/fraction`, `/timeline/duration`).
+- **Hardware MIDI Mapping (`Timeline3D/Input/MIDI`):**
+  - Mapped for APC40, nanoKONTROL, X-Touch, and standard MIDI keyboards:
+    - Notes `94` (Play), `93` (Stop/Pause), `95` (Split Cue), `60` (GO Trigger), `91`/`92` (Frame Step).
+    - CC `1`–`8` (Layer 0–7 Opacity Faders), CC `9` (Master Audio Gain), CC `60` (Jog Wheel Scrubbing), CC `114`/`115` (Stop/Play).
 
-- **Vulkan Instanced Texturing (`Cues` & `Layers` GLSL MATs):**
-  - Updated `Timeline3D/Cues/phong1GLSL_CueMat` (`Vertex` & `Pixel`) and `Timeline3D/Layers/phong1GLSL_CueMat` (`Vertex` & `Pixel`) from legacy OpenGL bindless handles (`uint64_t` / `TDInstanceTexture2D()`) to Vulkan `flat uint instanceTextureIndex`, `TDInstanceTextureIndex()`, and `TDInstanceTexture(iVert.instanceTextureIndex, ...)`.
-  - Restores track headers (`Layer 0`–`Layer 4`) in `LayerSettings` and cue rendering (thumbnails, titles, selection outlines) in `Timeline3D`.
-- **Zero-Cue Rendering & Warnings (`Cues`):**
-  - Driven `render`, `display`, and `instancing` on `Timeline3D/Cues/geo_Cues` and `geo_Keyframe_Lines` with `op('null_InstanceInfo').numChans > 0` so no uninstanced placeholder box or missing-attribute warnings appear when there are 0 cues.
-- **Timecode & Scrub Bar Labels (`container_Timecode` & `geo_TimeIcons`):**
-  - Rewrote `container_Timecode/CACHE/execute1` (`_populate_cache()` on `onStart` / `onCreate`) to synchronously populate all 60 `tex3d1` slices (`00`–`59` at `256x256`) using `prefill` + `replacesingle` / `replacesinglepulse`.
-  - Removed the legacy OpenGL `gl_PointCoord.y` inversion in `Timeline3D/Canvas/geo_TimeIcons/phong4GLSLPixel` and updated `geo_TimeIcons.par.ty` so scrub bar timecode markers render upright and inside the camera frustum.
-- **Timing Engine & Playback (`Time` & `RenderPick`):**
-  - Aligned `Timeline3D/Time/insert1` `contents` with `select_Library` columns (`begin = 0.0`, `length = Timelinelength` for master segment `0`), preventing `timer1` from jumping immediately to `done0 = 1.0` when cues exist.
-  - Fixed `ext.Player.StartPlaying` → `ext.Player.Play` in `Timeline3D/Time/timerCallbacks`.
-  - Added null guards in `RenderPick.py`.
-- **Interactive Cue Dragging & Precision Snapping (`RenderPick`):**
-  - Eliminated legacy snapping conflict (`base_Snapping`) that enforced a 5.73s deadzone and fought continuous mouse translation.
-  - Implemented lightweight, adaptive screen-space snapping (~8px) with real-time visual guide (`geo_SnapLine`).
-  - Added parameter change guards in `SetStartTime`, `SetLength`, and `_ProcessVerticalLayerDrag` to prevent redundant parameter cooking during 60 FPS translation.
-- **Rock-Solid 60 FPS Zoom & RangeSlider (`container_RangeSlider`):**
-  - Eliminated Vulkan dynamic texture reallocation traps by replacing dynamic panel resolution with a fixed custom-resolution GLSL shader (`1024x32`) with normalized coordinate uniforms.
-  - Enforced motion guards and zero-overhead layout anchor updates, keeping drag loops strictly under 2 ms/frame at 60 FPS.
+### 2. Marker Track & Show Logic (Wait-for-Go & Loops)
+- **Marker Data Engine (`Timeline3D/Markers`):**
+  - Table-driven marker system storing `id`, `time`, `name`, `color`, `action`, `target`.
+  - **Action Modes:**
+    - `Continue`: Normal continuous show playback.
+    - `Pause` (*Wait-for-Go*): Playhead halts frame-accurately at the marker and waits for operator input (`GO` button, Enter key, or `/timeline/go` OSC command).
+    - `Loop`: Cycles playback between current marker and target/previous marker until released.
+    - `Jump`: Instantaneous seek to target marker.
+  - **Navigation & Shortcuts:** Key `M` / `m` creates a marker at the playhead; `Shift + Left` / `Shift + Right` jump directly between markers; `Enter` triggers `GO`.
+  - **Transport UI:** Dedicated `GO` (large green button) and `+M` buttons in `container_Transport`.
+
+### 3. Professional Layer Headers (Mute, Solo, Lock & Opacity)
+- **Per-Layer Controls (`Timeline3D/Layers`):**
+  - `Mute` (Toggle): Silences both video and audio of the track without moving cues.
+  - `Solo` (Toggle): Isolates the selected track(s), fading all non-solo layers to 0.0 opacity.
+  - `Lock` (Toggle): Locks the entire track against accidental mouse movement, stretching, or razor cutting in `RenderPick.py`.
+  - `Opacity` (Float 0.0–1.0): Master track opacity fader multiplying underlying cue opacities.
+  - `Blendmode` (Menu: *Over, Add, Multiply, Screen, Lighten, Difference*).
+
+### 4. Media Inspector, Missing Media Relinker & Codec Advisor
+- **Asset Manager (`Timeline3D/Assets`):**
+  - Scans all multimedia cues (`Imagefile`, `Audiofile`, `Scenecomp`, `Moviespec`).
+  - Table `table_Assets` flags file existence, missing paths, and codecs.
+  - **GPU Codec Advisor:** Inspects video codecs; flags CPU-bound formats (H.264, HEVC) with performance warnings and validates optimal GPU formats (HAP, HAP Q, NotchLC, Apple ProRes).
+  - **Batch Relinker:** `RelinkFolder(new_path)` automatically searches and reconnects missing media across directories.
+  - Root parameters on page `Assets`: `Scanassets` (Pulse), `Totalassets`, `Missingassets`, `Codecwarnings`.
+
+### 5. Web Remote Control for Tablet / iPad (HTML5 & WebSockets)
+- **Embedded Web Server (`Timeline3D/WebRemote`):**
+  - Native `webserverDAT` listening on port `8080` (configurable on page `Show Control`).
+  - Self-contained, responsive dark-mode touch interface (no Internet connection or CDN required).
+  - **Features:**
+    - Giant tactile **GO**, **PAUSE**, and **STOP** buttons.
+    - Monospace digital timecode clock with live progress scrubber bar.
+    - Marker chip carousel for instant one-tap section jumping.
+    - Layer master opacity sliders and Mute buttons.
+    - Low-latency real-time bidirectional updates via WebSockets and REST JSON API (`/api/status`, `/api/action`).
+
+### 6. Interactive Editing & Ergonomics (Fase 1)
+- **Razor Tool / Cuchilla (`C` & `btn_Split`):** Splits cue cleanly at playhead into Part A and Part B, automatically preserving video playback continuity by recalculating `Trimstart = Trimstart + (splitTime - st) * Speed`.
+- **Fast Duplication (`Ctrl + D` & `Alt + Drag`):** Contiguous duplication along track (`Ctrl+D`) or instant clone-and-drag with mouse (`Alt+Drag`).
+- **Dynamic Cursor Feedback:** `arrowLeftRight` (`↔`) on edge stretch, `arrowAll` (`✥`) on translation, `pointer` on release.
+- **Color Tagging:** 7 presets (*DefaultBlue, EmeraldGreen, AmberGold, VioletMagenta, CrimsonRed, CyanElectric, DarkSlate*) driving GPU instanced cue colors via `parexec_cue_colors`.
+
+### 7. Video Outputs & Render Quality (Fase 2)
+- **Dual Outputs + Spout & NDI:** Independent `out1`, `out2`, `spout_out1`, `spout_out2`, `ndi_out1`, `ndi_out2` TOPs driven by root parameter page `Outputs`.
+- **Hermite Smoothstep Crossfades:** 4 transition curve modes: `Linear`, `Smoothstep` ($3x^2 - 2x^3$), `EaseIn` ($x^2$), and `EaseOut` ($1 - (1-x)^2$).
+- **High-Performance 4K Buffering:** 5-slot video engine with `prereadframes = 24`, `highperfread = True`, and `alwaysloadinitial = True`.
+
+### 8. Modulation & Automation Engine (Fase 3)
+- **9-Channel `cue_time` Matrix:** Active cues and generative scenes receive:
+  `active`, `local_seconds`, `media_seconds`, `fraction`, `length`, `opacity`, `curve`, `audio_react`, `lfo`.
+- **Automation Modes:** `Automode` (*Off, RampUp, RampDown, Triangle, Pulse, SineLFO, AudioReact*), `Automin`, `Automax`, `Autospeed`.
 
 ---
 
-## AI Automation & TDMCP Bridge
-
-- [`TDMCP.tox`](TDMCP.tox) & [`.mcp.json`](.mcp.json) — Embedded TDMCP server bridge (`http://127.0.0.1:13316/mcp`) for inspecting and editing the live TouchDesigner network via MCP.
-- [`AgentSDK/`](AgentSDK/) — Python helpers (`TimelineSceneEngine`, `jpshaders_nodes`, `jpshaders_catalog.json`) for scripting scenes, fades, and JPShaders GLSL nodes synchronized with the timeline.
-- [`skills/`](skills/) — Agent skills (`td-multi-layer-timeline`, `td-glsl-jpshaders-expert`, `td-pops-tops-scene-builder`, `td-timeline-scene-orchestrator`).
-- [`docs/TUTORIAL_TRANSCRIPTION.md`](docs/TUTORIAL_TRANSCRIPTION.md) — Technical breakdown and architecture transcription of the TD-MTL tutorial.
-
----
-
-## Installation & Usage
-
-1. Open `Release/Multi_Layer_Timeline.tox` or load `v1.10.toe` in TouchDesigner 2025+.
-2. Drop media into layers or click **Add Cue** in the settings page.
-3. Use the **Transport Bar** to play, pause, stop, step frames (`±1F`), and scrub.
-4. Route layers/cues to `Output 1` and `Output 2` for multi-display projection.
-
-### Keyboard Shortcuts
+## Keyboard Shortcuts Reference
 
 | Action | Shortcut |
 | :--- | :--- |
-| **Zoom In / Out** | `Alt + Mouse Wheel` |
-| **Pan Canvas** | `Shift + Mouse Wheel` (horizontal) / `Mouse Wheel` (vertical) |
+| **Play / Pause Toggle** | `Space` |
+| **GO / Resume from Marker** | `Enter` / `Return` |
+| **Add Marker at Playhead** | `M` / `m` |
+| **Jump to Previous / Next Marker** | `Shift + Left Arrow` / `Shift + Right Arrow` |
 | **Step -1 Frame / +1 Frame** | `Left Arrow` / `Right Arrow` |
-| **Go to Start (0s)** | `Home` |
-| **Multi-Select** | Hold `Shift` while clicking cues |
-| **Snap to Playhead** | Hold `Ctrl + Alt` while dragging a cue |
-| **Snap to Increments** | Hold `Ctrl` while dragging a cue |
-| **Copy Selected Cues** | `Ctrl + C` (pastes starting at current playhead) |
-| **Delete Selected Cues** | `Delete` |
-| **Undo Action** | `Ctrl + Z` |
+| **Razor Tool (Split Cue at Playhead)** | `C` / `c` |
+| **Duplicate Selected Cues** | `Ctrl + D` |
+| **Clone & Drag Cue** | Hold `Alt` while dragging a cue |
+| **Copy / Paste Selected Cues** | `Ctrl + C` / `Ctrl + V` |
+| **Delete Selected Cues** | `Delete` / `Backspace` |
+| **Home View (Full Timeline 0–100%)** | `H` / `h` |
+| **Center View on Playhead** | `G` / `g` |
+| **Zoom In / Out** | `Ctrl + =` / `Ctrl + -` (or `Alt + Mouse Wheel`) |
 
 ---
 
-## Credits
+## OSC Address Map (Bitfocus Companion & StreamDeck)
 
-- **Tim Franklin** — Original Architecture & Concept
-- **Brian Alexander** — Timing & Transport Engine
-- **Lucas Morgan** — Box Select & Matrix Transforms
-- **Tolch.x** — TouchDesigner 2025+ Vulkan Modernization, Dual Output Engine, Audio Track & Waveform Visualizer, TDMCP Integration, and Interactive Dragging/Trimming Engine
+| Address | Arguments | Description |
+| :--- | :--- | :--- |
+| `/timeline/play` | none | Starts playback |
+| `/timeline/pause` | none | Pauses playback |
+| `/timeline/stop` | none | Stops and resets to 0.0s |
+| `/timeline/toggle_play` | none | Toggles play/pause state |
+| `/timeline/go` | none | Triggers GO (resumes from Wait-for-Go markers) |
+| `/timeline/goto` | `[seconds: float]` | Seeks timeline to specified seconds |
+| `/timeline/goto_fraction` | `[fraction: float]` | Seeks timeline to normalized fraction (`0.0`–`1.0`) |
+| `/timeline/step` | `[frames: int]` | Steps timeline by `±N` frames |
+| `/timeline/home` | none | Resets visible range slider to 0.0–1.0 |
+| `/timeline/marker/jump` | `[name_or_id: str]` | Jumps playhead directly to marker |
+| `/timeline/marker/next` | none | Jumps to next marker |
+| `/timeline/marker/prev` | none | Jumps to previous marker |
+| `/timeline/marker/add` | `[name: str]` | Creates a marker at playhead |
+| `/timeline/split` | none | Splits cue at playhead |
+| `/timeline/duplicate` | none | Duplicates selected cues |
+| `/timeline/layer/mute` | `[layer: int, state: 0/1]` | Sets layer Mute state |
+| `/timeline/layer/solo` | `[layer: int, state: 0/1]` | Sets layer Solo state |
+| `/timeline/layer/opacity` | `[layer: int, value: float]` | Sets layer opacity (`0.0`–`1.0`) |
 
-## License
+---
 
-MIT / Derivative TouchDesigner Community Asset
+## Installation & Release Files
+
+1. Open reference project `v1.14.toe` in TouchDesigner 2025+ (Build `2025.32460` or later).
+2. Master release component: `Release/Multi_Layer_Timeline.tox` (also mirrored at `Tox/Master/Multi_Layer_Timeline.tox`).
+3. Connect external control:
+   - **Web Remote:** Open `http://<machine-ip>:8080/` in any browser or iPad on the same network.
+   - **OSC:** Send UDP OSC commands to port `7000`; listen for feedback on port `7001`.
+   - **MIDI:** Connect any MIDI device and toggle `Enable MIDI` on the `Show Control` page.

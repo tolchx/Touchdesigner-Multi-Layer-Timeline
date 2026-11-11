@@ -104,14 +104,14 @@ class RenderPick:
 		self.ProposedEndPar = parent.Main.op('Cues/base_Snapping/constant_ProposedStartTime').par.value1
 
 	def _GetSnapThreshold(self):
-		"""Returns snapping threshold in world time (seconds), matching ~12 screen pixels."""
+		"""Returns snapping threshold in world time (seconds), matching ~8 screen pixels."""
 		try:
-			val = abs(ext.Transformer.ScreenSpaceToWorldspace(x=100, y=0, offset=(12, 0)).x)
-			if 0.001 < val < 30.0:
+			val = abs(ext.Transformer.ScreenSpaceToWorldspace(x=100, y=0, offset=(8, 0)).x)
+			if 0.001 < val < 1.5:
 				return val
 		except Exception:
 			pass
-		return 0.2
+		return 0.15
 
 	def _GetSnapTargets(self, exclude_selection=True):
 		"""Collects snap target times (seconds) across the timeline."""
@@ -245,6 +245,8 @@ class RenderPick:
 
 			primary_init_layer = self.InitialLayers[0] if len(self.InitialLayers) > 0 else ext.Selection.Selection[0].par.Layer.eval()
 			layer_delta = target_layer - primary_init_layer
+			if layer_delta == 0:
+				return
 
 			can_move = True
 			for ind, obj in enumerate(ext.Selection.Selection):
@@ -258,7 +260,9 @@ class RenderPick:
 				for ind, obj in enumerate(ext.Selection.Selection):
 					if not obj.par.Lock.eval():
 						init_l = self.InitialLayers[ind] if ind < len(self.InitialLayers) else obj.par.Layer.eval()
-						obj.par.Layer = init_l + layer_delta
+						dest_l = init_l + layer_delta
+						if obj.par.Layer.eval() != dest_l:
+							obj.par.Layer = dest_l
 				self.Layers = [x.par.Layer.eval() for x in ext.Selection.Selection]
 		except Exception:
 			pass
@@ -501,21 +505,8 @@ class RenderPick:
 
 				delta_x = currentClickPosition.x - self.ClickPosition.x
 
-				# Update proposed/delete pars for base_Snapping compatibility
-				try:
-					if len(self.ClickPositionOffsets) > 0:
-						sortedClickPos = sorted(self.ClickPositionOffsets, key=lambda x: x.x)
-						sortedSelection = sorted(ext.Selection.Selection, key=lambda x: x.par.Starttime.eval())
-						selectionBlockStartTime = currentClickPosition.x + sortedClickPos[0].x
-						selectionBlockEndTime = currentClickPosition.x + sortedClickPos[-1].x + sortedSelection[-1].par.Cuelength.eval()
-						self.ProposedStartPar.val = selectionBlockStartTime
-						self.ProposedEndPar.val = selectionBlockEndTime
-						self.DeleteLeftPar.val = selectionBlockStartTime
-						self.DeleteRightPar.val = selectionBlockStartTime
-						self.DeleteLeftPar2.val = selectionBlockEndTime
-						self.DeleteRightPar2.val = selectionBlockEndTime
-				except Exception:
-					pass
+				# base_Snapping parameters bypassed for smooth 60 FPS translation
+				pass
 
 				# 1. Right-edge Stretch (modify Cuelength, keep Starttime fixed)
 				if getattr(self, 'CanStretch', False):
@@ -664,7 +655,8 @@ class RenderPick:
 			frameLength = 1000 / self.User.Fps.eval() * .001
 			realStartTime = self.myOp.IncrementalTransform([realStartTime], frameLength)[0]
 
-		Cue.par.Starttime = realStartTime
+		if abs(Cue.par.Starttime.eval() - realStartTime) > 1e-4:
+			Cue.par.Starttime = realStartTime
 
 	def SetLength(self, obj, time, addTo = False):
 		if obj.par.Lock.eval():
@@ -682,9 +674,12 @@ class RenderPick:
 		realLength = max(0.05, realLength)
 
 		if addTo:
-			obj.par.Cuelength = max(0.05, obj.par.Cuelength.eval() + realLength)
+			new_len = max(0.05, obj.par.Cuelength.eval() + realLength)
+			if abs(obj.par.Cuelength.eval() - new_len) > 1e-4:
+				obj.par.Cuelength = new_len
 		else:
-			obj.par.Cuelength = realLength
+			if abs(obj.par.Cuelength.eval() - realLength) > 1e-4:
+				obj.par.Cuelength = realLength
 
 	def GetObject(self, selectedOp, instanceId, tag):
 		prefix = self.ObjectPrefix[tag]

@@ -107,6 +107,14 @@ def onPulse(par):
 
 		projectOp.CloseProject(saveBeforeExit=response)
 
+	elif par.name == 'Exportshow':
+		fpath = str(par.owner.par.Showjsonfile.eval() or '').strip()
+		projectOp.ExportShowJSON(filepath=fpath if fpath else None)
+
+	elif par.name == 'Importshow':
+		fpath = str(par.owner.par.Showjsonfile.eval() or '').strip()
+		projectOp.ImportShowJSON(filepath=fpath if fpath else None)
+
 	elif par.name == 'Addcue':
 		parent.Main.op('Project').AddDefault(op('select_CurrentTime')['timer_fraction_WorldPos'].eval())
 

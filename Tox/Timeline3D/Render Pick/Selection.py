@@ -125,24 +125,17 @@ class Selection:
 		isInsideBox = xTest and yTest
 		return isInsideBox
 		
-	def DoSelection(self, selectionList, oldSelection, select = True):
-
-		newSel = set(selectionList)
-		oldSel = set(oldSelection)
-		
-		dif = oldSel - newSel
-
-		for i in dif:
-			if i != None:
-				i.par.Selectionindex = -1
-				i.par.Selected = False
-	
+	def DoSelection(self, selectionList, oldSelection=None, select = True):
+		cues = parent.Main.op('Cues').ops('base_Cue*')
+		sel_set = set([x for x in selectionList if x is not None])
+		for c in cues:
+			if c not in sel_set:
+				c.par.Selectionindex = -1
+				c.par.Selected = False
 
 		for ind, obj in enumerate(selectionList):
-			if obj != None:
-					
+			if obj is not None:
 				obj.par.Selected = select
-				
 				if select:
 					obj.par.Selectionindex = ind
 				else:

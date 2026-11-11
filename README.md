@@ -1,12 +1,52 @@
 # TD-MTL (TouchDesigner 2025+ & TDMCP Fork)
 
-> Fork of [franklin113/Touchdesigner-Multi-Layer-Timeline](https://github.com/franklin113/Touchdesigner-Multi-Layer-Timeline) updated for **TouchDesigner 2025+** (Vulkan GLSL compatibility, fixed timecode caching, timeline segment engine, and clean zero-cue state) with **TDMCP / AgentSDK** automation support.
+> Fork of [franklin113/Touchdesigner-Multi-Layer-Timeline](https://github.com/franklin113/Touchdesigner-Multi-Layer-Timeline) updated for **TouchDesigner 2025+** (Vulkan GLSL compatibility, fixed timecode caching, timeline segment engine, clean zero-cue state) with **TDMCP / AgentSDK** automation support, **Dual Independent Video Outputs**, **Audio Track with Waveform Visualizer & Auto-Fit**, and **Enhanced 60 FPS GPU Interactive Cue Dragging & Edge Trimming**.
 
-This document also preserves the original documentation from the upstream `0.74` / pre-1.0 branch below.
+---
 
-## TouchDesigner 2025+ Compatibility Fixes (`v0.8`, Verified on Build `2025.32460`)
+## What's New in `v1.10` (TouchDesigner 2025+ Verified)
 
-Opening the original `.toe`/`.tox` components in modern TouchDesigner 2025+ builds introduced Vulkan GLSL and timing regressions that prevented the interface from rendering or playing back properly. The following fixes are applied and saved into `Tox/`:
+### 1. Dual Independent Video Outputs (Multi-Screen Projection)
+- **Per-Cue & Per-Layer Output Routing:** Route individual cues or entire layers to `out1` (Output 1), `out2` (Output 2), or `both` (simultaneous multi-screen projection).
+- **Independent Aspect Ratios & Fit Modes:**
+  - Presets: `16:9`, `16:10`, `4:3`, `21:9`, `9:16`, `1:1`, and `Custom` (with user-defined pixel resolution `Customw` x `Customh`).
+  - Fit modes: `fit` (Fit Best / Letterbox), `fill` (Fit Outside / Crop), `fitoutside`, and `native` (Native resolution).
+- **GUI Preview Switcher:** One-click preview toggle buttons (`[OUT 1]`, `[OUT 2]`, `[SPLIT]`) with live status in the timeline header.
+- **Physical Display Outputs:** Master-level `out1` and `out2` TOPs ready for Window COMP routing to separate physical projectors or LED screens.
+
+### 2. Audio Track, Live Waveform & Timeline Auto-Fit
+- **Dedicated Audio Header & Track:** Audio track strip with volume fader, live stereo VU meters, Mute, Solo, and Pan controls.
+- **GLSL Visualizer Modes:** Switch between `Waveform`, `Spectrogram`, and `Lissajous` visualizations.
+- **Duration Auto-Fit:** Automatically scales the entire timeline duration (`Timelinelength`) to perfectly match the loaded audio file without clipping.
+
+### 3. Smooth 60 FPS GPU Interactive Dragging & Dual-Edge Trimming
+- **RenderPick Continuous Streaming:** Switched `renderpick1.par.strategy` to `select` (*While Select*), ensuring fluid 60 FPS coordinate streaming during mouse interaction.
+- **Dual-Edge Trimming:**
+  - **Right-Edge Stretch:** Drag the right handle to adjust cue duration (`Cuelength`) while keeping the start time fixed.
+  - **Left-Edge Stretch:** Drag the left handle to adjust start time (`Starttime`) and duration while keeping the end time fixed.
+- **World-Space Scale-Independent Calculations:** Edge detection evaluates directly in seconds, immune to camera zoom, window scaling, or DPI mismatches.
+- **Vertical Layer Transitions:** Procedural layer calculation using `Computedlowerbounds` and `Computedlayerheight` relative to the initial touch layer, providing responsive, jitter-free layer switching with boundary protection.
+- **Magnetic Snapping:** Snaps cue boundaries to the playhead, subrange markers, and neighboring cues with real-time `geo_SnapLine` visual feedback.
+- **Self-Healing Selection:** Upgraded `Selection.py` (`DoSelection`) to guarantee clean single-cue white selection outlines and eliminate duplicate selection artifacts.
+
+### 4. TimeBase Parity Features
+- **Subrange Playback:** Define In/Out boundaries (`Subrangein`, `Subrangeout`, `Enablesubrange`) for looped rehearsal or section editing.
+- **Frame-Accurate Stepping:** Dedicated `±1F` buttons and `Left`/`Right` arrow shortcuts for single-frame precision.
+- **Navigation Shortcuts:** `Home` (go to start / 0s) and `Goto` timecode jump.
+- **Per-Cue Looping:** Individual cue loop toggle (`Loopcue`).
+- **Movie Trim & Playback Speed:** In-cue video trimming (`Trimstart`, `Trimend`) and variable playback `Speed` multiplier.
+- **Extended Cue Types:** Support for Media, Tox, TCP/IP, OSC, Text, Event, and Audio cues.
+- **JSON Show Serializer:** Portable show export and import (`Shows/show_default.json`) for backing up and transferring multi-track shows.
+
+### 5. Inline Renaming
+- **Track Renaming:** Double-click any layer track header in `LayerSettings` to edit track names inline.
+- **Cue Renaming:** Double-click any cue in `Timeline3D` to rename cues directly on the timeline canvas.
+
+---
+
+## TouchDesigner 2025+ Compatibility Fixes (`v0.8`, Build `2025.32460`)
+
+Opening the original `.toe`/`.tox` components in modern TouchDesigner 2025+ builds introduced Vulkan GLSL and timing regressions. The following foundational fixes were applied:
 
 - **Vulkan Instanced Texturing (`Cues` & `Layers` GLSL MATs):**
   - Updated `Timeline3D/Cues/phong1GLSL_CueMat` (`Vertex` & `Pixel`) and `Timeline3D/Layers/phong1GLSL_CueMat` (`Vertex` & `Pixel`) from legacy OpenGL bindless handles (`uint64_t` / `TDInstanceTexture2D()`) to Vulkan `flat uint instanceTextureIndex`, `TDInstanceTextureIndex()`, and `TDInstanceTexture(iVert.instanceTextureIndex, ...)`.
@@ -14,16 +54,16 @@ Opening the original `.toe`/`.tox` components in modern TouchDesigner 2025+ buil
 - **Zero-Cue Rendering & Warnings (`Cues`):**
   - Driven `render`, `display`, and `instancing` on `Timeline3D/Cues/geo_Cues` and `geo_Keyframe_Lines` with `op('null_InstanceInfo').numChans > 0` so no uninstanced placeholder box or missing-attribute warnings appear when there are 0 cues.
 - **Timecode & Scrub Bar Labels (`container_Timecode` & `geo_TimeIcons`):**
-  - Rewrote `container_Timecode/CACHE/execute1` (`_populate_cache()` on `onStart` / `onCreate`) to synchronously populate all 60 `tex3d1` slices (`00`–`59` at `256x256`) using `prefill` + `replacesingle` / `replacesinglepulse`, replacing the legacy `delayFrames=300` / `me.time.frame` race that produced empty `128x128` caches. Fixed `cacheOp` → `tex3D` in `CACHE/timer1_callbacks`.
+  - Rewrote `container_Timecode/CACHE/execute1` (`_populate_cache()` on `onStart` / `onCreate`) to synchronously populate all 60 `tex3d1` slices (`00`–`59` at `256x256`) using `prefill` + `replacesingle` / `replacesinglepulse`.
   - Removed the legacy OpenGL `gl_PointCoord.y` inversion in `Timeline3D/Canvas/geo_TimeIcons/phong4GLSLPixel` and updated `geo_TimeIcons.par.ty` so scrub bar timecode markers render upright and inside the camera frustum.
-- **Scrub Bar Shader Cleanup (`geo_ScrubBar`):**
-  - Removed unused `uShadowStrength` and `uShadowColor` uniform declarations from `Timeline3D/Canvas/geo_ScrubBar/phong2GLSLVertex`.
 - **Timing Engine & Playback (`Time` & `RenderPick`):**
   - Aligned `Timeline3D/Time/insert1` `contents` with `select_Library` columns (`begin = 0.0`, `length = Timelinelength` for master segment `0`), preventing `timer1` from jumping immediately to `done0 = 1.0` when cues exist.
   - Fixed `ext.Player.StartPlaying` → `ext.Player.Play` in `Timeline3D/Time/timerCallbacks`.
-  - Added a null guard for `event.selectedOp` in `Tox/Timeline3D/Render Pick/RenderPick.py` (`EventSelectStart`).
+  - Added null guards in `RenderPick.py`.
 
-## AI Automation & Fork Structure
+---
+
+## AI Automation & TDMCP Bridge
 
 - [`TDMCP.tox`](TDMCP.tox) & [`.mcp.json`](.mcp.json) — Embedded TDMCP server bridge (`http://127.0.0.1:13316/mcp`) for inspecting and editing the live TouchDesigner network via MCP.
 - [`AgentSDK/`](AgentSDK/) — Python helpers (`TimelineSceneEngine`, `jpshaders_nodes`, `jpshaders_catalog.json`) for scripting scenes, fades, and JPShaders GLSL nodes synchronized with the timeline.
@@ -32,148 +72,37 @@ Opening the original `.toe`/`.tox` components in modern TouchDesigner 2025+ buil
 
 ---
 
-# TD-MTL
+## Installation & Usage
 
-This document is currently actually referencing functionality within the dev branch as I'm preparing to release a 1.0 version.
+1. Open `Release/Multi_Layer_Timeline.tox` or load `v1.10.toe` in TouchDesigner 2025+.
+2. Drop media into layers or click **Add Cue** in the settings page.
+3. Use the **Transport Bar** to play, pause, stop, step frames (`±1F`), and scrub.
+4. Route layers/cues to `Output 1` and `Output 2` for multi-display projection.
 
-# Description:
+### Keyboard Shortcuts
 
-A general purpose multi-layer timeline system, TD-MTL's main goal is to provide the TouchDesigner community with a timeline system for all types of work. With the general purpose concept in mind, the system can be customized in many ways. Whether you want to time out OSC cues, video media compositing, or external tox presets, our system can assist you.
+| Action | Shortcut |
+| :--- | :--- |
+| **Zoom In / Out** | `Alt + Mouse Wheel` |
+| **Pan Canvas** | `Shift + Mouse Wheel` (horizontal) / `Mouse Wheel` (vertical) |
+| **Step -1 Frame / +1 Frame** | `Left Arrow` / `Right Arrow` |
+| **Go to Start (0s)** | `Home` |
+| **Multi-Select** | Hold `Shift` while clicking cues |
+| **Snap to Playhead** | Hold `Ctrl + Alt` while dragging a cue |
+| **Snap to Increments** | Hold `Ctrl` while dragging a cue |
+| **Copy Selected Cues** | `Ctrl + C` (pastes starting at current playhead) |
+| **Delete Selected Cues** | `Delete` |
+| **Undo Action** | `Ctrl + Z` |
 
-# Installation: 
-Within the release folder you will find a self contained tox file. Bring that into your project and make it an external tox. You don't want this to be saved within your project because whenever you save it can take a while. 
-To test it out, check the examples folder for media bins and video compositing systems. (coming soon)
+---
 
+## Credits
 
-# Usage:
-Because this tool is meant to be open to a variety of projects, it's not 100% ready to go out of the box. The timeline itself just outputs timing and cue information. To make it functional out of the box, you can look at the "Examples" folder which includes video players and media bins.
+- **Tim Franklin** — Original Architecture & Concept
+- **Brian Alexander** — Timing & Transport Engine
+- **Lucas Morgan** — Box Select & Matrix Transforms
+- **Tolch.x** — TouchDesigner 2025+ Vulkan Modernization, Dual Output Engine, Audio Track & Waveform Visualizer, TDMCP Integration, and Interactive Dragging/Trimming Engine
 
-TD-MTL provides a variety of cue types, such as "Media", "Tox", "TCP/IP", and more. A user can also build custom cue types that can store other data to assist in triggering all types of cues. With this openness in mind, we may not provide systems to fire all these types of cues. Out examples are meant to assist in the development of customized solutions.
+## License
 
-See the wiki for how to build a custom Timeline System.
-
-### Some useful pages from the wiki- 
-[Keyboard Shortcuts](https://github.com/franklin113/Touchdesigner-Multi-Layer-Timeline/wiki/Keyboard-Shortcuts)
-
-[How To Build A Media Bin](https://github.com/franklin113/Touchdesigner-Multi-Layer-Timeline/wiki/How-to-build-a-Media-Bin)
-
-[Saving And Loading A Timeline Project](https://github.com/franklin113/Touchdesigner-Multi-Layer-Timeline/wiki/How-To-Save-Your-Timeline-Project)
-
-# Contributing:
-The most useful types of contributions would be sharing your custom media bins and players for our examples folder. If you find a cool way to use it in your project, any demos or examples would be awesome.
-
-Any bug reports, issue tracking, feature requests, and documentation assistance would also be fantastic. 
-
-# Credits:
-Tim Franklin
-
-Brian Alexander
-
-Tolch.x
-
-# License:
-TDOO
-
-
-
-# Old documentation below, will get put into a wiki.
-
-
-# Usage
-
-## Shortcuts
-
-### Camera Shortcuts
-- Alt+Scroll-wheel to zoom in/out
-- Scroll-wheel or Shift+scroll-wheel can either scroll horizontally or vertically based on user settings
-
-### Timeline Editing Shortcuts
-While Dragging A Cue --
-- Ctrl+Alt - snaps to playhead
-- Ctrl - snaps to certain time increments
-
-With A Cue Selected --
-- Delete - deletes the selected cues
-- Ctrl+c - copies the selected cues and pastes them, starting at the playhead.
-- Ctrl+z - Undo After deleting or adding a cue
-# Release History
-
-## 0.8
-### - TouchDesigner 2025+ (Vulkan) & Playback Fixes (Tolch.x)
-- Migrated `Cues` and `Layers` GLSL MATs (`phong1GLSL_CueMat`) to Vulkan `TDInstanceTextureIndex()` / `TDInstanceTexture()`
-- Fixed `container_Timecode` digit cache population (`CACHE/execute1`) and `geo_TimeIcons` Vulkan `gl_PointCoord.y` orientation & camera frustum placement
-- Added zero-cue render/instancing guard on `geo_Cues` and `geo_Keyframe_Lines`
-- Fixed `Time/insert1` segment 0 column alignment, `Time/Player.LoadPreset` channel lookup by name, `StartPlaying` backward-compat alias, `Transport` Play trigger from finished/ready states, and `RenderPick` null selection guard
-- Added TDMCP, `AgentSDK`, and agent skills integration
-
-## 0.74 
-### - Snapping
-- Selected cues can now be snapped to the front or back of other cues
-
-### - Timing
-- A new timing system has been put in place by Brian Alexander. 
-- Preload pulse can be received prior to every cue
-- A master parellel timer can be accessed for playback and triggering
-
-## 0.73
-### - Project Management
-- Message box has been added to ask the user to save when they close the project or load a new one
-- Auto-Save on exit removed
-- Save backups is disabled temporarily
-- This no longer uses TDJson and now uses a much simpler parameter reader/writer system. 
-
-### - UI
-- New camera system using range sliders.
-- Zoom towards camera by holding alt+mousewheel.
-- Various "Invert Scroll" parameters added to camera
-- Removed camera settings from user preferences. 
-- New Range Bar has been added. 
-- Made more timecode readouts visible sooner at various timeline lengths.
-
-## 0.7
-## - Project Management
-
-- New "Project" Page in the user settings allows you to select from any number of timelines in your project.
-- Now supports saving and loading multiple timelines within a project.
-- Supports external saving and loading of timeline projects.
-- Timelines are stored as TDJson in storage for efficient load and unload
-- Projects are saved to txt file as TDJson in a user designated path.
-- Timeline projects are saved automatically as the toe file is saved.
-- Timeline projects are backed up to a backup folder located next to the project.
-
-- Dropdown Menu provides a list of all available timelines in your project
-
-## - Cue Building
-
-- New "Add Cue" button has been added on the setting page.
-- Copy and Paste Multiple Cues.
-- Full undo / redo support for deleting and adding cues.
-
-## - UI
-
-### - Cue Scheduling
-- Full view of a 1 sec- 24 hour timeline
-- Time icons along timeline provide clear visual of time position
-- Time icon increments adjust as the camera zooms into the timeline
-
- ### - Snapping
- - Snap cues to other cues 
- - Snap cues to playhead
- - Snap cues or playhead to various levels of time increments based on zoom level
- 
-### - Timing
-- Master timer sends all custom parameter data and timeline info
-- Transport control via scrub bar and transport buttons
-- Countdown and Countup to end of timeline
-
-### - Interface
-- Custom parameters offer an easy way to build a UI, or just use it as is.
-- Ability to adjust look of layers, cues, and playhead
-- Seperate pages for User Settings, Camera, and Project
-
-### - Selection
--Multiselect
--Box select (Thanks Lucas!)
-
-### - Callbacks
-- Implimented a callback system via Alpha Moon Base's Callback Manager. 
+MIT / Derivative TouchDesigner Community Asset

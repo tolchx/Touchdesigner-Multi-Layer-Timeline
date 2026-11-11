@@ -1,0 +1,159 @@
+{
+  "format": "TD-MTL-Show",
+  "version": "1.0",
+  "generator": "TouchDesigner 2025.32460 - TD-MTL v0.8",
+  "timestamp": "2026-11-10T18:24:24.605941",
+  "timeline": {
+    "duration": 30.0,
+    "fps": 60.0,
+    "subrange": {
+      "active": false,
+      "start": 5.0,
+      "end": 12.0,
+      "action": "loop"
+    },
+    "view": {
+      "lrange": 0.0,
+      "rrange": 1.0
+    }
+  },
+  "audio_layer": {
+    "file": "C:/Users/Tolch/Desktop/AudioTranscriberAI_Marco Faraone - Overvision.mp3",
+    "volume": 1.0
+  },
+  "layers": [
+    {
+      "index": 0,
+      "name": "ESCENA 1"
+    },
+    {
+      "index": 1,
+      "name": "ESCENA 2"
+    },
+    {
+      "index": 2,
+      "name": "ESCENA 3"
+    },
+    {
+      "index": 3,
+      "name": "ESCENA 4"
+    },
+    {
+      "index": 4,
+      "name": "ESCENA 5"
+    }
+  ],
+  "cues": [
+    {
+      "name": "base_Cue0",
+      "title": "Cue 0",
+      "type": "Internal",
+      "layer": 0,
+      "starttime": 0.0,
+      "cuelength": 5.0,
+      "fadein": 0.5,
+      "fadeout": 0.5,
+      "loop": false,
+      "imagefile": "C:/Program Files/Derivative/TouchDesigner.2025.32460/Samples/Map/Nature/Movie.1.mp4",
+      "thumbnail": "/Multi_Layer_Timeline/Timeline3D/Cues/moviefilein1",
+      "moviespec": "",
+      "trimstart": 2.0,
+      "trimend": 6.0,
+      "speed": 1.5,
+      "text": "LIVE TEXT TEST",
+      "font": "Arial",
+      "fontsize": 54.0,
+      "fontcolor": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "commandon": "",
+      "commandoff": "",
+      "audiofile": "",
+      "audiovolume": 0.0,
+      "bgcolor": [
+        0.0,
+        0.184,
+        0.395
+      ],
+      "scenecomp": "/Scenes/scene_Cue0",
+      "lock": false
+    },
+    {
+      "name": "base_Cue1",
+      "title": "Cue 1",
+      "type": "Internal",
+      "layer": 1,
+      "starttime": 4.4271,
+      "cuelength": 5.0,
+      "fadein": 2.5,
+      "fadeout": 2.5,
+      "loop": false,
+      "imagefile": "C:/Program Files/Derivative/TouchDesigner.2025.32460/Samples/Map/Nature/Movie.3.mp4",
+      "thumbnail": "/Multi_Layer_Timeline/Timeline3D/Cues/moviefilein1",
+      "moviespec": "",
+      "trimstart": 0.0,
+      "trimend": 0.0,
+      "speed": 0.01,
+      "text": "",
+      "font": "Arial",
+      "fontsize": 6.0,
+      "fontcolor": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "commandon": "",
+      "commandoff": "",
+      "audiofile": "",
+      "audiovolume": 0.0,
+      "bgcolor": [
+        0.0,
+        0.184,
+        0.395
+      ],
+      "scenecomp": "",
+      "lock": false
+    },
+    {
+      "name": "base_Cue2",
+      "title": "Cue 2",
+      "type": "Internal",
+      "layer": 2,
+      "starttime": 9.4271,
+      "cuelength": 10.0694,
+      "fadein": 0.5,
+      "fadeout": 0.5,
+      "loop": true,
+      "imagefile": "C:/Program Files/Derivative/TouchDesigner.2025.32460/Samples/Map/Nature/Movie.5.mp4",
+      "thumbnail": "/Multi_Layer_Timeline/Timeline3D/Cues/moviefilein1",
+      "moviespec": "",
+      "trimstart": 0.0,
+      "trimend": 0.0,
+      "speed": 0.01,
+      "text": "",
+      "font": "Arial",
+      "fontsize": 6.0,
+      "fontcolor": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "commandon": "",
+      "commandoff": "",
+      "audiofile": "",
+      "audiovolume": 0.0,
+      "bgcolor": [
+        0.0,
+        0.184,
+        0.395
+      ],
+      "scenecomp": "",
+      "lock": false
+    }
+  ]
+}

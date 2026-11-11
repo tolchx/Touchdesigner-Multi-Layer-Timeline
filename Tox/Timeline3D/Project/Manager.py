@@ -181,6 +181,74 @@ class Manager:
 		ui.undo.endBlock()
 		
 		pass
+	def LoopCue(self, cueOp=None, count=1):
+		'''
+		Duplicates selected cue(s) end-to-end count times along their respective layers.
+		'''
+		cues_to_loop = []
+		if cueOp is not None:
+			cues_to_loop = [cueOp]
+		elif self.RenderPickComp and hasattr(self.RenderPickComp.ext, 'Selection'):
+			cues_to_loop = [c for c in list(self.RenderPickComp.ext.Selection.Selection) if c is not None]
+
+		if not cues_to_loop:
+			return []
+
+		ui.undo.startBlock('Loop Cue () - ' + self.myOp.path)
+		count = max(1, int(count))
+		new_cues = []
+		for src_cue in cues_to_loop:
+			try:
+				st = float(src_cue.par.Starttime.eval())
+				length = float(src_cue.par.Cuelength.eval())
+				layer = int(src_cue.par.Layer.eval())
+				base_title = str(src_cue.par.Title.eval()) if hasattr(src_cue.par, 'Title') else src_cue.name
+
+				for k in range(1, count + 1):
+					new_cue = self.AddCue(copyOp=src_cue)
+					new_cue.par.Starttime = st + (k * length)
+					new_cue.par.Layer = layer
+					if hasattr(new_cue.par, 'Title'):
+						new_cue.par.Title = f'{base_title} (Loop {k})'
+					new_cues.append(new_cue)
+			except Exception as e:
+				print(f'Error looping cue {src_cue}: {e}')
+
+		if new_cues and self.RenderPickComp and hasattr(self.RenderPickComp.ext, 'Selection'):
+			self.RenderPickComp.ext.Selection.OldSelection = list(cues_to_loop)
+			self.RenderPickComp.ext.Selection.Selection = list(new_cues)
+			self.RenderPickComp.ext.Selection.DoSelection(self.RenderPickComp.ext.Selection.Selection, self.RenderPickComp.ext.Selection.OldSelection, select=True)
+
+		if self.RenderPickComp:
+			self.RenderPickComp.UpdateAllBounds()
+
+		ui.undo.endBlock()
+		return new_cues
+
+	def ExportShowJSON(self, filepath=None):
+		'''
+		Exports complete show state to a portable JSON file.
+		'''
+		return mod('saveRestore').ShowManager(self.myOp).ExportShowJSON(filepath=filepath)
+
+	def ImportShowJSON(self, filepath=None, clearExisting=True):
+		'''
+		Imports complete show state from a portable JSON file.
+		'''
+		return mod('saveRestore').ShowManager(self.myOp).ImportShowJSON(filepath=filepath, clearExisting=clearExisting)
+
+	def GetShowDict(self):
+		'''
+		Returns complete show definition as a Python dictionary.
+		'''
+		return mod('saveRestore').ShowManager(self.myOp).GetShowDict()
+
+	def LoadShowDict(self, show, clearExisting=True):
+		'''
+		Loads complete show definition from a Python dictionary.
+		'''
+		return mod('saveRestore').ShowManager(self.myOp).LoadShowDict(show, clearExisting=clearExisting)
+
 	### END Cue Creation
 
 	### Cue Destruction

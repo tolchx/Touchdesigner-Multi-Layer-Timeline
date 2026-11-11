@@ -43,6 +43,14 @@ def onKey(dat, key, character, alt, lAlt, rAlt, ctrl, lCtrl, rCtrl, shift, lShif
             manager.RemoveCues()
         return
 
+    # Razor Tool: Split cue at playhead ('c' or 'C')
+    if key in ['c', 'C'] and not ctrl and not alt:
+        if hasattr(manager, 'SplitCueAtPlayhead'):
+            manager.SplitCueAtPlayhead()
+        elif hasattr(manager.ext, 'Manager') and hasattr(manager.ext.Manager, 'SplitCueAtPlayhead'):
+            manager.ext.Manager.SplitCueAtPlayhead()
+        return
+
     # Home view (H)
     if key in ['h', 'H'] and not ctrl and not alt:
         _home_view()
@@ -88,4 +96,9 @@ def onShortcut(dat, shortcutName, time):
         manager.CopyOperation()
     elif shortcutName == 'ctrl.v':
         manager.PasteOperation()
+    elif shortcutName == 'ctrl.d':
+        if hasattr(manager, 'DuplicateSelectedCues'):
+            manager.DuplicateSelectedCues()
+        elif hasattr(manager.ext, 'Manager') and hasattr(manager.ext.Manager, 'DuplicateSelectedCues'):
+            manager.ext.Manager.DuplicateSelectedCues()
     return

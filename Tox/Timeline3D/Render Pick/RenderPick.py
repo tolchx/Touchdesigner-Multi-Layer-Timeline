@@ -478,6 +478,32 @@ class RenderPick:
 		parent.Main.op('Cues/base_Snapping/delete_Selection').par.delscope.expr = finalChanNames
 
 		if self.IsTimelineItem:
+			# Alt + Drag: Duplicate cues and drag the new clones
+			if getattr(self, 'CanTranslate', False) and (self.KeyboardOp.par.Alt.eval() or self.KeyboardOp.par.Onlyalt.eval()):
+				mgr = self.MainOp.op('Project')
+				if mgr and hasattr(mgr.ext, 'Manager'):
+					clones = []
+					for c in list(ext.Selection.Selection):
+						try:
+							new_c = mgr.ext.Manager.AddCue(copyOp=c)
+							clones.append(new_c)
+						except Exception as e:
+							print(f'Alt+Drag clone error: {e}')
+					if clones:
+						ext.Selection.OldSelection = list(ext.Selection.Selection)
+						ext.Selection.Selection = list(clones)
+						ext.Selection.DoSelection(ext.Selection.Selection, select=True)
+						selectedItem = clones[0]
+						self.ParComp.par.op = selectedItem
+
+			# Dynamic cursor feedback
+			t3d = self.MainOp
+			if t3d and hasattr(t3d.par, 'cursor'):
+				if getattr(self, 'CanStretch', False) or getattr(self, 'CanStretchLeft', False):
+					t3d.par.cursor = 'arrowLeftRight'
+				elif getattr(self, 'CanTranslate', False):
+					t3d.par.cursor = 'arrowAll'
+
 			self.ProcessSelectedCues(event.pos)
 
 		if open_scene_item is not None:
@@ -596,6 +622,11 @@ class RenderPick:
 		self.CanStretchLeft = False
 		self.CanTranslate = False
 		self.CanDragVertically = False
+
+		# Reset cursor to standard pointer
+		t3d = self.MainOp
+		if t3d and hasattr(t3d.par, 'cursor'):
+			t3d.par.cursor = 'pointer'
 
 		try:
 			ext.Bounds.UpdateAllBounds()

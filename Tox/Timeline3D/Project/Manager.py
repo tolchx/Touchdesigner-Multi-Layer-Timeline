@@ -225,6 +225,119 @@ class Manager:
 		ui.undo.endBlock()
 		return new_cues
 
+	def DuplicateSelectedCues(self, offset=None):
+		'''
+		Duplicates selected cues (Ctrl+D). If offset is None, places each copy
+		immediately after the source cue's end time along its respective layer.
+		'''
+		cues_to_dup = []
+		if self.RenderPickComp and hasattr(self.RenderPickComp.ext, 'Selection'):
+			cues_to_dup = [c for c in list(self.RenderPickComp.ext.Selection.Selection) if c is not None]
+
+		if not cues_to_dup and hasattr(self, 'CuesOp') and self.CuesOp:
+			cues_to_dup = [c for c in self.CuesOp.findChildren(tags=['CueItem'], depth=1) if hasattr(c.par, 'Selected') and c.par.Selected.eval()]
+
+		if not cues_to_dup:
+			return []
+
+		ui.undo.startBlock('Duplicate Cues () - ' + self.myOp.path)
+		new_cues = []
+		for src_cue in cues_to_dup:
+			try:
+				st = float(src_cue.par.Starttime.eval())
+				length = float(src_cue.par.Cuelength.eval())
+				layer = int(src_cue.par.Layer.eval())
+				new_cue = self.AddCue(copyOp=src_cue)
+				if offset is not None:
+					new_cue.par.Starttime = st + offset
+				else:
+					new_cue.par.Starttime = st + length
+				new_cue.par.Layer = layer
+				new_cues.append(new_cue)
+			except Exception as e:
+				print(f'Error duplicating cue {src_cue}: {e}')
+
+		if new_cues and self.RenderPickComp and hasattr(self.RenderPickComp.ext, 'Selection'):
+			self.RenderPickComp.ext.Selection.OldSelection = list(cues_to_dup)
+			self.RenderPickComp.ext.Selection.Selection = list(new_cues)
+			self.RenderPickComp.ext.Selection.DoSelection(self.RenderPickComp.ext.Selection.Selection, self.RenderPickComp.ext.Selection.OldSelection, select=True)
+
+		if self.RenderPickComp:
+			self.RenderPickComp.UpdateAllBounds()
+
+		ui.undo.endBlock()
+		return new_cues
+
+	def SplitCueAtPlayhead(self, cueOp=None, splitTime=None):
+		'''
+		Razor Tool ('C'): Splits cue(s) into two parts at splitTime (defaults to playhead).
+		If cueOp is provided, splits only that cue.
+		Else splits selected cue(s), or all cues intersecting the playhead if none selected.
+		Adjusts Starttime, Cuelength, and video Trimstart seamlessly.
+		'''
+		if splitTime is None:
+			time_comp = self.TimeComp.op('timer1') if (hasattr(self, 'TimeComp') and self.TimeComp) else parent.Main.op('Time/timer1')
+			if time_comp is not None and time_comp['timer_seconds0'] is not None:
+				splitTime = float(time_comp['timer_seconds0'].eval())
+			else:
+				splitTime = 0.0
+
+		cues_to_split = []
+		if cueOp is not None:
+			cues_to_split = [cueOp]
+		elif self.RenderPickComp and hasattr(self.RenderPickComp.ext, 'Selection') and len(self.RenderPickComp.ext.Selection.Selection) > 0:
+			cues_to_split = [c for c in list(self.RenderPickComp.ext.Selection.Selection) if c is not None]
+		else:
+			all_cues = self.CuesOp.findChildren(tags=['CueItem'], depth=1)
+			for c in all_cues:
+				st = float(c.par.Starttime.eval())
+				length = float(c.par.Cuelength.eval())
+				if st + 0.05 < splitTime < (st + length) - 0.05:
+					cues_to_split.append(c)
+
+		if not cues_to_split:
+			return []
+
+		ui.undo.startBlock('Split Cue () - ' + self.myOp.path)
+		created_cues = []
+		for src_cue in cues_to_split:
+			try:
+				st = float(src_cue.par.Starttime.eval())
+				du = float(src_cue.par.Cuelength.eval())
+				et = st + du
+				if not (st + 0.05 < splitTime < et - 0.05):
+					continue
+
+				partA_len = splitTime - st
+				partB_len = et - splitTime
+
+				new_cue = self.AddCue(copyOp=src_cue)
+				new_cue.par.Starttime = splitTime
+				new_cue.par.Cuelength = partB_len
+				new_cue.par.Layer = src_cue.par.Layer.eval()
+
+				speed = float(src_cue.par.Speed.eval()) if hasattr(src_cue.par, 'Speed') else 1.0
+				if speed <= 0:
+					speed = 1.0
+				orig_ts = float(src_cue.par.Trimstart.eval()) if hasattr(src_cue.par, 'Trimstart') else 0.0
+				new_cue.par.Trimstart = orig_ts + (partA_len * speed)
+
+				src_cue.par.Cuelength = partA_len
+				created_cues.append(new_cue)
+			except Exception as e:
+				print(f'Error splitting cue {src_cue}: {e}')
+
+		if created_cues and self.RenderPickComp and hasattr(self.RenderPickComp.ext, 'Selection'):
+			self.RenderPickComp.ext.Selection.OldSelection = list(cues_to_split)
+			self.RenderPickComp.ext.Selection.Selection = list(created_cues)
+			self.RenderPickComp.ext.Selection.DoSelection(self.RenderPickComp.ext.Selection.Selection, self.RenderPickComp.ext.Selection.OldSelection, select=True)
+
+		if self.RenderPickComp:
+			self.RenderPickComp.UpdateAllBounds()
+
+		ui.undo.endBlock()
+		return created_cues
+
 	def ExportShowJSON(self, filepath=None):
 		'''
 		Exports complete show state to a portable JSON file.

@@ -1,10 +1,12 @@
 import sys
 import json
 import urllib.request
+import os
 
-URL = "http://127.0.0.1:13316/mcp"
+DEFAULT_PORT = 13316
 
-def run_td_code(code_str):
+def run_td_code(code_str, port=DEFAULT_PORT):
+    url = f"http://127.0.0.1:{port}/mcp"
     payload = {
         "jsonrpc": "2.0",
         "method": "tools/call",
@@ -15,7 +17,7 @@ def run_td_code(code_str):
         "id": 1
     }
     data = json.dumps(payload).encode('utf-8')
-    req = urllib.request.Request(URL, data=data, headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             res = json.loads(resp.read().decode('utf-8'))
@@ -31,19 +33,27 @@ def run_td_code(code_str):
                 print(res)
                 return res
     except Exception as e:
-        print(f"Connection error: {e}", file=sys.stderr)
+        print(f"Connection error to {url}: {e}", file=sys.stderr)
         return None
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        arg = sys.argv[1]
-        # Check if arg is a file
-        import os
+    port = int(os.environ.get("TD_PORT", DEFAULT_PORT))
+    args = sys.argv[1:]
+    
+    if len(args) >= 2 and args[0] in ['-p', '--port']:
+        port = int(args[1])
+        args = args[2:]
+    elif len(args) >= 1 and args[0].isdigit() and len(args[0]) == 5:
+        port = int(args[0])
+        args = args[1:]
+        
+    if args:
+        arg = args[0]
         if os.path.exists(arg) and arg.endswith('.py'):
             with open(arg, 'r', encoding='utf-8') as f:
                 code_to_run = f.read()
         else:
             code_to_run = arg
-        run_td_code(code_to_run)
+        run_td_code(code_to_run, port=port)
     else:
-        print("Usage: python td_client.py <code> or <file.py>")
+        print(f"Usage: python td_client.py [-p PORT] <code> or <file.py>")

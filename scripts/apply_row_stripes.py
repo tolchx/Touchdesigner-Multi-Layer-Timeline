@@ -6,7 +6,16 @@ Usage: python scripts/td_client.py scripts/apply_row_stripes.py
 
 Everything is token-driven from /Multi_Layer_Timeline/UI/colors.
 Idempotent: re-running reuses the ops it created.
+
+Demo captures are OFF by default. Set CAPTURE = True below to write
+`tmp/rows_after_timeline.png` and `tmp/rows_after_layers.png` (relative to the
+project folder reported by TouchDesigner), e.g. when checking a restyle.
 """
+
+# Write verification PNGs into <project>/tmp/ (off by default: the script must not
+# leave files behind in a normal run).
+CAPTURE = False
+CAPTURE_DIR = 'tmp'
 
 ROOT = '/Multi_Layer_Timeline'
 COLORS = ROOT + '/UI/colors'
@@ -270,15 +279,22 @@ for fn in (step_tokens, step_stripes, step_layer_accent):
     except Exception as e:
         report.append('ERROR in %s: %s' % (fn.__name__, e))
 
-for op_path, fname in (('Timeline3D/Render/render1', 'rows_after_timeline.png'),
-                       ('Timeline3D/Render/render_LayerSettings', 'rows_after_layers.png')):
-    try:
-        p = op(ROOT + '/' + op_path)
-        p.cook(force=True)
-        p.save('C:/Users/Tolch/Documents/AI_Code/Touchdesigner-Multi-Layer-Timeline/tmp/' + fname)
-        report.append('saved tmp/' + fname)
-    except Exception as e:
-        report.append('capture error: %s' % e)
+if CAPTURE:
+    import os
+    base = project.folder or os.getcwd()
+    dest = os.path.join(base, CAPTURE_DIR)
+    os.makedirs(dest, exist_ok=True)
+    for op_path, fname in (('Timeline3D/Render/render1', 'rows_after_timeline.png'),
+                           ('Timeline3D/Render/render_LayerSettings', 'rows_after_layers.png')):
+        try:
+            p = op(ROOT + '/' + op_path)
+            p.cook(force=True)
+            p.save(os.path.join(dest, fname))
+            report.append('saved %s/%s' % (CAPTURE_DIR, fname))
+        except Exception as e:
+            report.append('capture error: %s' % e)
+else:
+    report.append('captures off (set CAPTURE = True to write tmp/)')
 
 mat = op(CANVAS + '/glsl_mat_canvas')
 if mat:

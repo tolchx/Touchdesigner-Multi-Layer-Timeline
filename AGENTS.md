@@ -125,7 +125,7 @@ Do **not** use or edit `/ui/colors` at the project root — that is TouchDesigne
 | `cue_default` | `#1d3340` | default cue card fill / preset `DefaultBlue` |
 | `cue_outline` | `#2b333b` | idle cue outline reference (shader uses `0.190,0.222,0.255`, see below) |
 | `cue_outline_sel` | `#bfe6f0` | selected cue outline reference (shader `0.749,0.902,0.941`) |
-| `cue_outline_multi` | `#e0bf4a` | reserved for multi-selection; **not drawn yet** — shader index 2 reuses the selection cyan |
+| `cue_outline_multi` | `#e0bf4a` | outline of the 2nd and later cues of a multi-selection (shader index 2) |
 | `ruler_text` | `#858f99` | ruler label tint |
 | `row_alt` | `#0e0f12` | alternate-row striping |
 | `layer_accent_1..5` | `#547885` `#b89438` `#735c94` `#47856b` `#a85c57` | per-layer accent rail (cycled by card index `% 5`) |
@@ -139,13 +139,13 @@ Do **not** use or edit `/ui/colors` at the project root — that is TouchDesigne
 **Scripts** (run inside TouchDesigner through TDMCP, both idempotent — re-running re-applies values and never stacks ops):
 
 1. `python scripts/td_client.py scripts/apply_ui_theme.py` — pass 1: tokens, canvas/grid/playhead/snap, cue shader patch, ruler tint, 3D typography, cue palette map + migration of already-coloured cues, 2D buttons, duration card, audio header, duration popup, inspector swatches.
-2. `python scripts/td_client.py scripts/apply_row_stripes.py` — pass 2: `row_alt` + `layer_accent_*`, striping material, accent rails, demo captures to `tmp/`.
+2. `python scripts/td_client.py scripts/apply_row_stripes.py` — pass 2: `row_alt` + `layer_accent_*`, striping material, accent rails.
 
-Order matters (pass 2 replaces the background material installed by pass 1). Both end by writing before/after captures to `tmp/` through a hardcoded absolute path — update it if the repository moves. Neither script saves anything: after re-styling, save bottom-up (`scripts/save_bottom_up.py`) or the look is lost when TouchDesigner closes. The restyle lives in `Tox/Timeline3D/Canvas/Canvas.tox`, `.../Layers/Layers.tox`, `.../Cues/Cues.tox`, `.../Render/Render.tox` and `Tox/UI/UI.tox`.
+Order matters (pass 2 replaces the background material installed by pass 1). Only `apply_row_stripes.py` can write images, and only when its `CAPTURE` flag is set to `True`: it then saves `rows_after_timeline.png` / `rows_after_layers.png` into `<project folder>/tmp/` (path resolved from TouchDesigner, not a hardcoded absolute path). By default it writes no files. Neither script saves anything: after re-styling, save bottom-up (`scripts/save_bottom_up.py`) or the look is lost when TouchDesigner closes. The restyle lives in `Tox/Timeline3D/Canvas/Canvas.tox`, `.../Layers/Layers.tox`, `.../Cues/Cues.tox`, `.../Render/Render.tox` and `Tox/UI/UI.tox`.
 
 **Deliberately hardcoded** (there is no token access from inside GLSL, or the value is coupled to geometry):
 
-- `Timeline3D/Cues/phong1GLSL_CueMatPixel`: outline width `.022`, selection colours `vec3(0.190,0.222,0.255)` (idle) / `(0.749,0.902,0.941)` (index 1 **and** index 2, so multi-selection is not visually distinct yet), badge `(0.059,0.071,0.086)`, wire icon colours, vertical shade `mix(0.88, 1.07, …)`. These are patched as text by `apply_ui_theme.py` (`CUE_SHADER_*`, `BADGE_*`, `ICON_*`) — a palette change means editing those blocks and re-running; the idle literal is close to but not identical to the `cue_outline` token, so keep them in sync by hand.
+- `Timeline3D/Cues/phong1GLSL_CueMatPixel`: outline width `.022`, selection colours `vec3(0.190,0.222,0.255)` (index 0, idle) / `(0.749,0.902,0.941)` (index 1, primary selection) / `(0.878,0.749,0.290)` (index 2, every further cue of a multi-selection); the index is `min(2, cue.par.Selectionindex + 1)` from the vertex shader, and the badge border uses the same three-state test. Badge `(0.059,0.071,0.086)`, wire icon colours, vertical shade `mix(0.88, 1.07, …)`. These are patched as text by `apply_ui_theme.py` (`CUE_SHADER_*`, `BADGE_*`, `ICON_*`) — a palette change means editing those blocks and re-running; the idle literal is close to but not identical to the `cue_outline` token, so keep them in sync by hand.
 - `geo_TimeIcons/phong4GLSLVertex`: `gl_PointSize = 70.` — the glyph atlas layout is coupled to this sprite size, **do not resize** it to fit more labels (adjust the ruler thresholds instead, see below). The label tint is the literal `outcol.rgb *= vec3(0.560, 0.600, 0.640)` in `phong4GLSLPixel`.
 - 3D typography: font `Bahnschrift Condensed` everywhere; layer label 11.5 px `(0.62,0.66,0.72)` at `positionx 0.075`; cue title 26 px `(0.88,0.91,0.94)`.
 - Cue preset map is duplicated: `COLOR_MAP` inside `Timeline3D/Cues/parexec_cue_colors` **and** `CUE_NEW`/`CUE_OLD` in `apply_ui_theme.py` (the old values are only used to migrate cues painted before the restyle). Change both, otherwise menu presets and existing cues drift apart.

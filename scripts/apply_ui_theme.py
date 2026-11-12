@@ -207,6 +207,11 @@ BADGE_OLD = """			vec3 bgCol = mix(outcol.rgb, vec3(0.06, 0.11, 0.20), 0.90);
 			vec3 borderCol = (iVert.selectionIndex > 0) ? vec3(0.55, 0.85, 1.0) : vec3(0.38, 0.66, 0.96);"""
 
 BADGE_NEW = """			vec3 bgCol = mix(outcol.rgb, vec3(0.059, 0.071, 0.086), 0.92);
+			vec3 borderCol = (iVert.selectionIndex > 1) ? vec3(0.878, 0.749, 0.290) : ((iVert.selectionIndex > 0) ? vec3(0.749, 0.902, 0.941) : vec3(0.360, 0.430, 0.480));"""
+
+# The badge border was first patched with a single "> 0" test (cyan for every selected
+# cue); upgrade that intermediate form so a re-run still ends in the gold multi state.
+BADGE_SEL_ONLY = """			vec3 bgCol = mix(outcol.rgb, vec3(0.059, 0.071, 0.086), 0.92);
 			vec3 borderCol = (iVert.selectionIndex > 0) ? vec3(0.749, 0.902, 0.941) : vec3(0.360, 0.430, 0.480);"""
 
 ICON_OLD = """				if (inOutNode) {
@@ -233,7 +238,11 @@ def step_cue_shader():
     # idle cues: subtle slate hairline (selection 1), selected: light cyan (selection 2)
     for old, new in (
         ('vec3(0.1843, 0.1843, 0.1843),vec3(1.0,1.0,1.0),vec3(1.0, 0.9882, 0.3882)',
-         'vec3(0.190, 0.222, 0.255),vec3(0.749, 0.902, 0.941),vec3(0.749, 0.902, 0.941)'),
+         'vec3(0.190, 0.222, 0.255),vec3(0.749, 0.902, 0.941),vec3(0.878, 0.749, 0.290)'),
+        # intermediate state: cyan was used for both selected and multi-selected cues
+        ('vec3(0.190, 0.222, 0.255),vec3(0.749, 0.902, 0.941),vec3(0.749, 0.902, 0.941)',
+         'vec3(0.190, 0.222, 0.255),vec3(0.749, 0.902, 0.941),vec3(0.878, 0.749, 0.290)'),
+        (BADGE_SEL_ONLY, BADGE_NEW),
         ('newUV.y), .03);', 'newUV.y), .022);'),
         ('outcol += instanceColor;', 'outcol += instanceColor * mix(0.88, 1.07, clamp(texCoord0.y, 0.0, 1.0));'),
         (BADGE_OLD, BADGE_NEW),

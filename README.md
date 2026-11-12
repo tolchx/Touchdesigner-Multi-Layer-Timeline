@@ -22,7 +22,7 @@
          │ • Color Tagging (7 Color Presets)      │   │ • Web Remote (HTML5 / Port 8080)   │
          │ • Marker Track (Wait-for-Go / Loops)   │   │ • Hermite Smoothstep Crossfades    │
          │ • Layer Headers (Mute / Solo / Lock)   │   │ • 4K High-Perf Buffering (24 frms) │
-         │ • Dynamic VRAM Collapsing (AAVJ Engine)│   │ • Central Color Tokens (/ui/colors)│
+         │ • Dynamic VRAM Collapsing (ProSlate Engine)│   │ • Central Color Tokens (/ui/colors)│
          │ • Live GPU Telemetry HUD (FPS, VRAM %) │   │ • Bahnschrift Condensed Typography │
          └────────────────────────────────────────┘   └────────────────────────────────────┘
 ```
@@ -95,7 +95,7 @@
   `active`, `local_seconds`, `media_seconds`, `fraction`, `length`, `opacity`, `curve`, `audio_react`, `lfo`.
 - **Automation Modes:** `Automode` (*Off, RampUp, RampDown, Triangle, Pulse, SineLFO, AudioReact*), `Automin`, `Automax`, `Autospeed`.
 
-### 9. Modern High-Density UI & Performance Architecture (AAVJ Standard)
+### 9. Modern High-Density UI & Performance Architecture (ProSlate Standard)
 - **Centralized Design Tokens (`/ui/colors`):** 24 semantic color tokens (`panel_bg`, `panel_base`, `panel_header`, `outline_static`, `button_on`, etc.) driving all timeline panels and dialogs, enabling instant cohesive theme adjustments.
 - **Unified Pro Typography (`Bahnschrift Condensed`):** All 62+ text nodes standardized on Windows-native high-density condensed typography for zero label clipping and crisp sub-pixel legibility.
 - **Dynamic Universal Parameter Inspector (`parameter1`):** Focus tracking engine that dynamically displays clicked cue parameters with custom-only minimalist rows (`custom = True`, `builtin = False`, `separators = False`).

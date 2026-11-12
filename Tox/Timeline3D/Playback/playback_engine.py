@@ -407,7 +407,7 @@ def _set_cue_time(ct, active, local_t, media_t, length, opacity, curve_val=1.0, 
 
 
 def _collapse_cue_vram(cue_op):
-    """Collapses VRAM footprint for an inactive cue (AAVJ standard)."""
+    """Collapses VRAM footprint for an inactive cue (ProSlate standard)."""
     if not cue_op or not getattr(cue_op, 'isCOMP', False):
         return
     for r in cue_op.findChildren(type=renderTOP):
@@ -441,7 +441,7 @@ def _collapse_cue_vram(cue_op):
 
 
 def _restore_cue_vram(cue_op, res_x=1920, res_y=1080):
-    """Restores full resolution and unbypasses an active cue (AAVJ standard)."""
+    """Restores full resolution and unbypasses an active cue (ProSlate standard)."""
     if not cue_op or not getattr(cue_op, 'isCOMP', False):
         return
     for i in cue_op.findChildren(type=inTOP):
@@ -572,7 +572,7 @@ def update_playback():
     entered_cues = [c for c in current_active_cues if c.name not in prev_names]
     exited_names = prev_names - cur_names
 
-    # VRAM Collapsing Engine (AAVJ Pattern)
+    # VRAM Collapsing Engine (ProSlate Pattern)
     mlt_root = op('/Multi_Layer_Timeline')
     vram_collapse_on = bool(mlt_root.par.Enablevramcollapse.eval()) if mlt_root and hasattr(mlt_root.par, 'Enablevramcollapse') else True
 

@@ -1,84 +1,106 @@
 ---
-name: td-aavj-modern-ui
-description: Expert system for designing and building modern, high-density, dark-mode DAW-grade TouchDesigner user interfaces based on the AAVJ UI architecture (port 13317). Covers centralized design tokens (/ui/colors), Bahnschrift Condensed typography, responsive flex layouts (verttb / horizlr / stretch), GPU-accelerated GLSL UI shaders, custom controls (sliders, dropDownMenu widgets, clip slots), VRAM collapsing engines, universal parameter inspectors, and Vulkan 60 FPS performance contracts.
+name: td-modern-pro-ui
+description: Expert system for designing and building modern, high-density, dark-mode DAW-grade TouchDesigner user interfaces based on the ProSlate UI architecture. Covers centralized design tokens (/ui/colors), Bahnschrift Condensed typography, responsive flex layouts (verttb / horizlr / stretch), GPU-accelerated GLSL UI shaders, custom controls (sliders, dropDownMenu widgets, clip slots), VRAM collapsing engines, universal parameter inspectors, and Vulkan 60 FPS performance contracts.
 ---
 
-# TouchDesigner Modern UI Design System — AAVJ Standard
+# TouchDesigner Modern UI Design System — ProSlate Standard
 
-This skill encapsulates the UI/UX architecture, visual tokens, layout patterns, and performance contracts extracted from **AAVJ Beta** (`AAVJ_BETA_v1.26b`). Use this skill to design, restyle, or build sleek, high-density, pro audio-visual DAW interfaces in TouchDesigner 2025+.
+This skill encapsulates the UI/UX architecture, visual tokens, layout patterns, and performance contracts of the **ProSlate UI Framework**. Use this skill to design, restyle, or build sleek, high-density, pro audio-visual DAW interfaces in TouchDesigner 2025+.
 
 ---
 
 ## 1. Visual Identity & Aesthetic Principles
 
-AAVJ's aesthetic is characterized by a **high-density, low-fatigue, precision pro-software visual language** (similar to Ableton Live, Bitwig Studio, Resolume Arena, and modern Disguise software):
+ProSlate's aesthetic is characterized by a **high-density, low-fatigue, precision pro-software visual language** (similar to Ableton Live, Bitwig Studio, Resolume Arena, and modern Disguise software):
 
-- **Deep Slate Canvas:** Backgrounds avoid pure pitch black (`#000000`) and instead use micro-tuned dark slates (`0.03, 0.03, 0.03` / `#080808` to `0.05, 0.05, 0.05` / `#0d0d0d`).
-- **Subtle 1px Geometric Borders:** Sharp, fine outline borders (`0.15, 0.15, 0.15, 0.6`) separate panels without creating heavy cognitive weight.
-- **Micro-Contrast Accents:** Interactive active states use an elegant muted cyan/teal (`0.3276, 0.4719, 0.5200` / `#537885`) and subtle rollovers (`0.3086, 0.3185, 0.3185` at 35% opacity), reserving aggressive bright colors only for warnings (`warning_red`).
+- **Deep Slate Canvas:** Backgrounds avoid pure pitch black (`#000000`) and instead use micro-tuned dark slates (`0.025, 0.027, 0.032` / `#060708` to `0.045, 0.048, 0.055` / `#0b0c0e`).
+- **Subtle 1px Geometric Borders:** Sharp, fine outline borders (`0.12, 0.13, 0.15, 0.6`) separate panels without creating heavy cognitive weight.
+- **Micro-Contrast Accents:** Interactive active states use an elegant muted cyan/teal (`0.3276, 0.4719, 0.5200` / `#537885`) and subtle rollovers (`0.28, 0.46, 0.54`), reserving aggressive bright colors only for warnings (`warning_red` `#d92e2e`).
 - **Typography of Choice:** **`Bahnschrift Condensed`** (native to Windows 10/11) delivers ultra-clean horizontal compactness, allowing dense parameter naming and labels without text clipping.
-- **Vector Icon Glyphs:** Instead of loading dozens of PNG textures into VRAM, vector glyph fonts (`Material Design Icons` or `Segoe UI Symbol`) are used in `textCOMP`s.
+- **Vector Icon Glyphs:** Instead of loading dozens of PNG textures into VRAM, vector glyph fonts (`Material Design Icons` or `Segoe UI Symbol`) are used in `textCOMP`s via Unicode codepoints (`\U000f012c`, `✂`, `▶`, `⏸`, `⏹`).
 
 ---
 
 ## 2. Centralized Color Token Engine (`/ui/colors`)
 
-Never hardcode arbitrary RGB colors across individual panels. AAVJ maintains a centralized design token repository at `/ui/colors`.
+Never hardcode arbitrary RGB colors across individual panels. Maintain a centralized design token repository at `/ui/colors`.
 
 ### Semantic Token Palette
 
 ```python
-AAVJ_PALETTE = {
+PROSLATE_PALETTE = {
     # --- Canvas & Panels ---
-    'panel_bg':         (0.030, 0.030, 0.030, 1.0),   # Deepest container canvas (#080808)
-    'panel_base':       (0.050, 0.050, 0.050, 0.95),  # Standard panel card background
-    'panel_roll':       (0.080, 0.080, 0.080, 1.0),   # Panel hover / rollover state
-    'panel_active':     (0.120, 0.120, 0.120, 1.0),   # Panel active / selected state
+    'panel_bg':         (0.025, 0.027, 0.032, 1.0),   # Deepest container canvas (#060708)
+    'panel_base':       (0.045, 0.048, 0.055, 0.98),  # Standard panel card background (#0b0c0e)
+    'panel_header':     (0.055, 0.060, 0.070, 1.0),   # Toolbar / header strip background (#0e0f12)
+    'panel_roll':       (0.075, 0.082, 0.095, 1.0),   # Panel hover / rollover state
+    'panel_active':     (0.100, 0.110, 0.130, 1.0),   # Panel active / selected state
 
     # --- Typography ---
-    'text_static':      (0.650, 0.650, 0.650, 1.0),   # Default readable label text (#a6a6a6)
-    'text_roll':        (1.000, 1.000, 1.000, 1.0),   # Hover highlighted text (#ffffff)
-    'text_active':      (0.900, 0.900, 0.900, 1.0),   # Active control label text
+    'text_static':      (0.680, 0.700, 0.720, 1.0),   # Default readable label text (#adafb3)
+    'text_roll':        (1.000, 1.000, 1.000, 1.0),   # Hover highlighted text (pure white)
+    'text_active':      (0.920, 0.950, 0.980, 1.0),   # Active control label text
+    'text_dim':         (0.420, 0.440, 0.460, 1.0),   # Secondary / subtle text (#6b7075)
     'text_edit':        (0.200, 0.700, 0.900, 1.0),   # Inline field editing text
 
     # --- Borders & Outlines ---
-    'outline_static':   (0.150, 0.150, 0.150, 0.5),   # Default 1px subtle separation border
-    'outline_roll':     (0.350, 0.350, 0.350, 0.8),   # Rollover border highlight
+    'outline_static':   (0.120, 0.130, 0.150, 0.6),   # Default 1px subtle separation border
+    'outline_roll':     (0.280, 0.320, 0.360, 0.8),   # Rollover border highlight
+    'outline_active':   (0.328, 0.472, 0.520, 1.0),   # Active border accent (Cyan)
 
     # --- Buttons & Controls ---
-    'button_off':       (0.080, 0.080, 0.080, 0.8),   # Inactive button face
-    'button_on':        (0.328, 0.472, 0.520, 1.0),   # Active / Toggled button face (Cyan/Teal)
-    'button_onroll':    (0.400, 0.550, 0.600, 1.0),   # Active button hover
-    'button_offroll':   (0.140, 0.140, 0.140, 0.9),   # Inactive button hover
+    'button_off':       (0.070, 0.075, 0.085, 0.85),  # Inactive button face
+    'button_offroll':   (0.110, 0.120, 0.135, 0.95),  # Inactive button hover
+    'button_on':        (0.220, 0.380, 0.450, 1.0),   # Active / Toggled button face (Muted Teal)
+    'button_onroll':    (0.280, 0.460, 0.540, 1.0),   # Active button hover
+    'button_accent':    (0.328, 0.472, 0.520, 1.0),   # Primary accent (Play / GO)
 
     # --- Sliders & Meters ---
-    'slider_base':      (0.021, 0.021, 0.021, 1.0),   # Slider track background
-    'slider_fill':      (0.328, 0.472, 0.520, 0.85),  # Slider filled level
-    'warning_red':      (0.800, 0.150, 0.150, 1.0),   # Alert / Mute / Clip warning
+    'slider_base':      (0.025, 0.027, 0.032, 1.0),   # Slider track background
+    'slider_fill':      (0.280, 0.420, 0.480, 0.9),   # Slider filled level
+    'slider_knob':      (0.700, 0.750, 0.800, 1.0),   # Slider thumb / knob
+    'warning_red':      (0.850, 0.180, 0.180, 1.0),   # Alert / Mute / Error (#d92e2e)
+    'solo_gold':        (0.920, 0.720, 0.150, 1.0),   # Solo state highlight (#ebb826)
+    'marker_cyan':      (0.000, 0.850, 0.950, 1.0),   # Marker color (#00d9f2)
 }
 ```
 
 ### Implementing the Token Store in TouchDesigner
 
 Create a `baseCOMP` `/ui/colors` containing:
-1. `constantTOP` nodes for each token (e.g. `panel_base`, `button_on`, etc.).
-2. Merge them into a single `CHOP:out` table or reference dictionary via `update_fetch`:
+1. `tableDAT:table_colors` with columns `[name, r, g, b, a, hex]`.
+2. `nullDAT:out` connected from `table_colors`.
+3. An extension `ColorsExt` providing helper methods:
    ```python
-   # Expression binding on panel parameters:
-   op('/ui/colors/out')['panel_base', 'r']
-   # Or via ui.colors dictionary in TouchDesigner:
-   ui.colors['parms.dialog.bg']
+   class ColorsExt:
+       def __init__(self, ownerComp):
+           self.ownerComp = ownerComp
+       def Color(self, name):
+           t = self.ownerComp.op('table_colors')
+           if t and t[name, 'r'] is not None:
+               return (float(t[name, 'r']), float(t[name, 'g']), float(t[name, 'b']), float(t[name, 'a']))
+           return (0.5, 0.5, 0.5, 1.0)
+       def R(self, name): return self.Color(name)[0]
+       def G(self, name): return self.Color(name)[1]
+       def B(self, name): return self.Color(name)[2]
+       def A(self, name): return self.Color(name)[3]
+   ```
+4. Panel bindings via DAT expressions or extension:
+   ```python
+   op('/ui/colors/out')['panel_base', 'r'].val
+   # or
+   op('/ui/colors').Color('panel_base')
    ```
 
 ---
 
 ## 3. Responsive Layout Hierarchy (Flexbox Patterns in TouchDesigner)
 
-AAVJ structures its main application window (`/AAVJ`) using procedural Container COMP alignments:
+The ProSlate UI structures the main application window using procedural Container COMP alignments:
 
 ```mermaid
 flowchart TD
-    Root["/AAVJ (Container COMP)\nalign: verttb (Vertical Top-to-Bottom)\nbgcolor: 0.03, 0.03, 0.03"]
+    Root["/Root (Container COMP)\nalign: verttb (Vertical Top-to-Bottom)\nbgcolor: 0.025, 0.027, 0.032"]
     
     Taskbar["ui_taskbar (Container COMP)\nalignorder: 0.0 | h: 32px | stretchh: fill\n(Window header, exit button, project name)"]
     Main["ui_main (Container COMP)\nalignorder: 1.0 | stretchh: fill | align: verttb\n(Track headers, slots, midbar, page controls)"]
@@ -91,7 +113,7 @@ flowchart TD
 
 ### Layout Alignment Rules
 - **Vertical Stacks (`align = verttb`):** Order children strictly via `alignorder` (0.0, 1.0, 2.0). Never rely on spatial node coordinates.
-- **Horizontal Strips (`align = horizlr`):** Used inside layer rows (`layer0`):
+- **Horizontal Strips (`align = horizlr`):** Used inside layer rows:
   - Left Sidebar / Header (`layerctrl`): Fixed width `w = 400`, `alignorder = 0.0`.
   - Clip Slots Strip (`slots`): `stretchw = fill`, `alignorder = 1.0`.
 - **Responsive Stretches (`stretchh`, `stretchw`):**
@@ -102,12 +124,12 @@ flowchart TD
 
 ## 4. Hardware-Accelerated GLSL UI Shaders (`glslmultiTOP`)
 
-Rather than compositing buttons with heavy TOP chains (Over, Level, Crop, Text), AAVJ uses a **single lightweight GLSL pixel shader** inside each button/slot (`ctrl/glslmulti1`):
+Rather than compositing buttons with heavy TOP chains (Over, Level, Crop, Text), ProSlate uses a **single lightweight GLSL pixel shader** inside each button/slot (`ctrl/glslmulti1`):
 
-### The AAVJ Interactive Button Shader (`glslmulti_pixel`)
+### The ProSlate Interactive Button Shader (`glslmulti_pixel`)
 
 ```glsl
-// AAVJ Interactive Slot / Button Shader
+// ProSlate Interactive Slot / Button Shader
 uniform int uState;          // 1 when actively playing / toggled, 0 otherwise
 uniform int uHover;          // 1 on mouse rollover, 0 otherwise
 uniform int uFocus;          // 1 when selected/focused, 0 otherwise
@@ -155,10 +177,10 @@ void main()
 - **Key Parameters:**
   - `Font`: `Bahnschrift Condensed`
   - `Labelfontsize`: `12pt`, `Labelfontfraction`: `0.689`
-  - `Menubuttononfacecolor`: `(0.328, 0.472, 0.520, 1.0)` (Cyan accent)
-  - `Menubuttonofffacecolor`: `(0.080, 0.080, 0.080, 0.8)`
-  - `Menubgcolor`: `(0.021, 0.021, 0.021, 1.0)`
-  - `Menurollcolor`: `(0.308, 0.318, 0.318, 1.0)` at `0.35` opacity
+  - `Menubuttononfacecolor`: `(0.220, 0.380, 0.450, 1.0)` (Cyan accent)
+  - `Menubuttonofffacecolor`: `(0.070, 0.075, 0.085, 0.85)`
+  - `Menubgcolor`: `(0.025, 0.027, 0.032, 1.0)`
+  - `Menurollcolor`: `(0.280, 0.320, 0.360, 1.0)` at `0.35` opacity
   - `h`: `30px` (standard control height)
 
 ### B. Vertical Level Slider (`level`)
@@ -177,19 +199,18 @@ void main()
   4. `fit1 (fitTOP)`: Fits to container aspect ratio without stretching or distortion.
   5. `null_bg`: Wired directly to parent's `top` parameter.
 
-### D. Real-Time Telemetry Bar (`ui_stats`)
-- **FPS Monitor (`fpxstats`):** `performCHOP` sampling `cookrate` and `msec`, formatted into high-DPI monospace readout.
-- **VRAM Monitor (`vramstats`):** `performCHOP` sampling `gpu_mem_used` and `total_gpu_mem`. Computes percentage:
-  ```python
-  usage_ratio = op('perform1')['gpu_mem_used'] / op('perform2')['total_gpu_mem']
-  ```
-  Switches to `warning_red` if `usage_ratio > 0.85`.
+### D. Real-Time Telemetry HUD (`container_GPUStats`)
+- Monospace real-time monitor on the transport toolbar:
+  - `performCHOP` sampling `cookrate`, `msec`, `gpu_mem_used`, and `total_gpu_mem`.
+  - Line 1: `text_fps` → `f"{op('null_perf')['cookrate'].eval():0.1f} FPS  {op('null_perf')['msec'].eval():0.1f}ms"`
+  - Line 2: `text_vram` → `f"VRAM {(op('null_perf')['gpu_mem_used'].eval() / max(1.0, op('null_perf')['total_gpu_mem'].eval()) * 100):0.0f}% ({op('null_perf')['gpu_mem_used'].eval()/1024:0.1f}G)"`
+  - Alert Color Expression: switches to `warning_red` (`#d92e2e`) if `gpu_mem_used / total_gpu_mem > 0.85`.
 
 ---
 
 ## 6. Dynamic VRAM Collapsing & Expansion Engine
 
-In projects with 50+ media cues or generative scenes, leaving all textures, renderTOPs, and geometry active exhausts GPU VRAM and slows cook times. AAVJ solves this with an automatic VRAM Collapsing Engine (`vram_cleanup`):
+In projects with 50+ media cues or generative scenes, leaving all textures, renderTOPs, and geometry active exhausts GPU VRAM and slows cook times. ProSlate solves this with an automatic VRAM Collapsing Engine:
 
 ### Deactivation (When Cue Leaves Playback)
 When a clip stops or is replaced:
@@ -200,28 +221,29 @@ When a clip stops or is replaced:
 
 ```python
 def deactivateCue(target_network):
-    geoCOMPs = target_network.findChildren(type=geometryCOMP)
-    renderTOPs = target_network.findChildren(type=renderTOP)
-    inTOPs = target_network.findChildren(type=TOP, parName='outputresolution', parValue='useinput')
-    TOPs = target_network.findChildren(type=TOP)
+    """Collapses VRAM footprint for an inactive cue / scene."""
+    if not target_network or not getattr(target_network, 'isCOMP', False):
+        return
 
-    for g in geoCOMPs:
-        g.bypass = True
-        g.cook()
-
-    for r in renderTOPs:
+    for r in target_network.findChildren(type=renderTOP):
         r.par.resolution1 = 1
         r.par.resolution2 = 1
+        r.bypass = True
         r.cook()
 
-    for i in inTOPs:
-        i.par.outputresolution = 'eighth'
+    for i in target_network.findChildren(type=inTOP):
+        if hasattr(i.par, 'outputresolution'):
+            i.par.outputresolution = 'eighth'
         i.bypass = True
         i.cook()
 
-    for t in TOPs:
-        t.bypass = True
-        t.cook()
+    for g in target_network.findChildren(type=geometryCOMP):
+        g.bypass = True
+        g.cook()
+
+    for m in target_network.findChildren(type=moviefileinTOP):
+        if hasattr(m.par, 'active'):
+            m.par.active = 0
 ```
 
 ### Activation (When Cue Starts Playback)
@@ -233,42 +255,42 @@ When a clip is triggered:
 
 ```python
 def activateCue(target_network, runRezX=1920, runRezY=1080):
-    inTOPs = target_network.findChildren(type=TOP, parName='outputresolution', parValue='eighth')
-    TOPs = target_network.findChildren(type=TOP)
-    renderTOPs = target_network.findChildren(type=renderTOP)
-    fbTOPs = target_network.findChildren(type=feedbackTOP)
-    geoCOMPs = target_network.findChildren(type=geometryCOMP)
+    """Restores full resolution and unbypasses an active cue / scene."""
+    if not target_network or not getattr(target_network, 'isCOMP', False):
+        return
 
-    for i in inTOPs:
-        i.par.outputresolution = 'useinput'
+    for i in target_network.findChildren(type=inTOP):
+        if hasattr(i.par, 'outputresolution'):
+            i.par.outputresolution = 'useinput'
         i.bypass = False
         i.cook()
 
-    for t in TOPs:
-        t.bypass = False
-        t.cook()
-
-    for r in renderTOPs:
+    for r in target_network.findChildren(type=renderTOP):
         r.par.resolution1 = runRezX
         r.par.resolution2 = runRezY
         r.bypass = False
         r.cook()
 
-    for f in fbTOPs:
+    for f in target_network.findChildren(type=feedbackTOP):
         f.bypass = False
         f.cook()
-        f.par.resetpulse.pulse()
+        if hasattr(f.par, 'resetpulse'):
+            f.par.resetpulse.pulse()
 
-    for g in geoCOMPs:
+    for g in target_network.findChildren(type=geometryCOMP):
         g.bypass = False
         g.cook()
+
+    for m in target_network.findChildren(type=moviefileinTOP):
+        if hasattr(m.par, 'active'):
+            m.par.active = 1
 ```
 
 ---
 
 ## 7. Staggered Asynchronous Pre-Warming Engine (`base_warmupscript`)
 
-To prevent first-frame hitching and Vulkan shader compilation stutters when triggering a cue for the first time during a live show, AAVJ pre-warms all assets asynchronously on startup:
+To prevent first-frame hitching and Vulkan shader compilation stutters when triggering a cue for the first time during a live show, ProSlate pre-warms all assets asynchronously on startup:
 
 ```python
 def onStart():
@@ -289,29 +311,29 @@ def onStart():
 
 ## 8. Universal Parameter Inspector & Focus Engine (`op.focushist`)
 
-Instead of building custom UI panels for every cue or generator, AAVJ features a Universal Parameter Inspector docked in the control bay (`w1`):
+Instead of building custom UI panels for every cue or generator, the ProSlate architecture features a Universal Parameter Inspector docked in the control bay (`parameter1`):
 
-1. **Focus History Tracker (`op.focushist`):**
-   - Panel execution callbacks on each slot/cue publish clicked paths to `table_lastcontentpath`.
-   - Parameter slider clicks publish to `table_focushist`.
-   - `table_hist_all[0,0]` stores the active selected operator.
+1. **Focus History Tracker (`table_focuspath`):**
+   - Click callbacks on each cue publish their path to `table_focuspath[0, 0]`.
+   - Empty background clicks publish the root component path.
 2. **Dynamic Parameter COMP (`parameterCOMP`):**
    - Configured with:
      ```python
-     parameter1.par.op.expr = "op('null_lastfocuspath')[0,0] + '/network'"
+     parameter1.par.op.expr = "op('/ui/null_focuspath')[0,0].val if op('/ui/null_focuspath') else '/project_root'"
      parameter1.par.custom = True       # Shows only user-facing custom parameters
      parameter1.par.builtin = False     # Hides internal TouchDesigner Common/About tabs
      parameter1.par.separators = False  # Clean, minimalist parameter rows
-     parameter1.par.hmode = 'fill'
-     parameter1.par.vmode = 'anchors'
-     parameter1.par.topanchor = 0.95
+     parameter1.par.header = True       # Shows page tabs cleanly
+     parameter1.par.bgcolorr = op('/ui/colors').R('panel_base')
+     parameter1.par.bgcolorg = op('/ui/colors').G('panel_base')
+     parameter1.par.bgcolorb = op('/ui/colors').B('panel_base')
      ```
 
 ---
 
 ## 9. Global Keyboard Modifier State Engine (`/project/modifiers`)
 
-AAVJ provides a zero-overhead, global keyboard modifier engine:
+Provides a zero-overhead, global keyboard modifier engine:
 - Dedicated base components (`mod_ctrl`, `mod_alt`, `mod_shift`) each contain a `keyboardinCHOP` capturing the physical key state.
 - Compound states (`mod_ctrlalt`, `mod_altshift`, `mod_ctrlshift`) combine single states using `mathCHOP` (multiply / AND logic).
 - Output channels (`ctrl`, `alt`, `shift`, `ctrlalt`, etc.) are exposed as global bind CHOPs (`op.modifiers.par.Ctrl`, `op.modifiers.par.Alt`), allowing any UI script to query modifier combinations cleanly:
@@ -325,7 +347,7 @@ AAVJ provides a zero-overhead, global keyboard modifier engine:
 
 ## 10. Native Drag-and-Drop Ingestion & Slot Swapping (`base_dragdrop`)
 
-AAVJ implements a unified drag-and-drop pipeline handling OS file drops and interactive slot swapping:
+Implements a unified drag-and-drop pipeline handling OS file drops and interactive slot swapping:
 
 ```python
 def onDropGetResults(comp, info):
@@ -368,7 +390,7 @@ def onDropGetResults(comp, info):
 
 ## 11. Floating Context Menus & Dialogs (`base_popmenus`)
 
-AAVJ leverages TouchDesigner's `/sys/TDTox/popMenu` and `/sys/TDTox/popDialog`:
+Leverages TouchDesigner's `/sys/TDTox/popMenu` and `/sys/TDTox/popDialog`:
 - Context menus open on right-click (`panel.rselect == 1 and panel.click > 1`).
 - Dynamically populates `Items`:
   ```python

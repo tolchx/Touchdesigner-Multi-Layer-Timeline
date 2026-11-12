@@ -3,6 +3,11 @@ import json
 import urllib.request
 import os
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 DEFAULT_PORT = 13316
 
 def run_td_code(code_str, port=DEFAULT_PORT):

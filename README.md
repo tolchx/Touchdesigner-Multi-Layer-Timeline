@@ -4,7 +4,7 @@
 
 ---
 
-## Production Suite Overview (`v1.14` — TouchDesigner 2025+ Verified)
+## Production Suite Overview (`v1.16` — TouchDesigner 2025+ Verified)
 
 ```
                        ┌─────────────────────────────────────────────────────────┐
@@ -22,6 +22,8 @@
          │ • Color Tagging (7 Color Presets)      │   │ • Web Remote (HTML5 / Port 8080)   │
          │ • Marker Track (Wait-for-Go / Loops)   │   │ • Hermite Smoothstep Crossfades    │
          │ • Layer Headers (Mute / Solo / Lock)   │   │ • 4K High-Perf Buffering (24 frms) │
+         │ • Dynamic VRAM Collapsing (AAVJ Engine)│   │ • Central Color Tokens (/ui/colors)│
+         │ • Live GPU Telemetry HUD (FPS, VRAM %) │   │ • Bahnschrift Condensed Typography │
          └────────────────────────────────────────┘   └────────────────────────────────────┘
 ```
 
@@ -93,6 +95,13 @@
   `active`, `local_seconds`, `media_seconds`, `fraction`, `length`, `opacity`, `curve`, `audio_react`, `lfo`.
 - **Automation Modes:** `Automode` (*Off, RampUp, RampDown, Triangle, Pulse, SineLFO, AudioReact*), `Automin`, `Automax`, `Autospeed`.
 
+### 9. Modern High-Density UI & Performance Architecture (AAVJ Standard)
+- **Centralized Design Tokens (`/ui/colors`):** 24 semantic color tokens (`panel_bg`, `panel_base`, `panel_header`, `outline_static`, `button_on`, etc.) driving all timeline panels and dialogs, enabling instant cohesive theme adjustments.
+- **Unified Pro Typography (`Bahnschrift Condensed`):** All 62+ text nodes standardized on Windows-native high-density condensed typography for zero label clipping and crisp sub-pixel legibility.
+- **Dynamic Universal Parameter Inspector (`parameter1`):** Focus tracking engine that dynamically displays clicked cue parameters with custom-only minimalist rows (`custom = True`, `builtin = False`, `separators = False`).
+- **Dynamic VRAM Collapsing Engine (`playback_engine.py`):** Automatic memory purger shrinking inactive `renderTOP`s to 1x1px, `inTOP`s to 1/8th resolution, and bypassing idle geometry to save gigabytes of VRAM during large multi-scene shows. Governed by root parameter page `Performance` (`Enable VRAM Collapse`).
+- **Live GPU Telemetry HUD (`container_GPUStats`):** Monospace real-time monitor docked on the transport bar displaying `cookrate`, frame time (`ms`), and percentage of GPU VRAM used with an automatic alert color switch when VRAM exceeds 85%.
+
 ---
 
 ## Keyboard Shortcuts Reference
@@ -142,7 +151,7 @@
 
 ## Installation & Release Files
 
-1. Open reference project `v1.14.toe` in TouchDesigner 2025+ (Build `2025.32460` or later).
+1. Open reference project `v1.16.toe` (or `v1.14.toe`) in TouchDesigner 2025+ (Build `2025.32460` or later).
 2. Master release component: `Release/Multi_Layer_Timeline.tox` (also mirrored at `Tox/Master/Multi_Layer_Timeline.tox`).
 3. Connect external control:
    - **Web Remote:** Open `http://<machine-ip>:8080/` in any browser or iPad on the same network.

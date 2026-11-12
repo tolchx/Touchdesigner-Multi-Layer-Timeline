@@ -405,6 +405,83 @@ def _set_cue_time(ct, active, local_t, media_t, length, opacity, curve_val=1.0, 
                 p.val = v
 
 
+
+def _collapse_cue_vram(cue_op):
+    """Collapses VRAM footprint for an inactive cue (AAVJ standard)."""
+    if not cue_op or not getattr(cue_op, 'isCOMP', False):
+        return
+    for r in cue_op.findChildren(type=renderTOP):
+        try:
+            r.par.resolution1 = 1
+            r.par.resolution2 = 1
+            r.bypass = True
+            r.cook()
+        except:
+            pass
+    for i in cue_op.findChildren(type=inTOP):
+        try:
+            if hasattr(i.par, 'outputresolution'):
+                i.par.outputresolution = 'eighth'
+            i.bypass = True
+            i.cook()
+        except:
+            pass
+    for g in cue_op.findChildren(type=geometryCOMP):
+        try:
+            g.bypass = True
+            g.cook()
+        except:
+            pass
+    for m in cue_op.findChildren(type=moviefileinTOP):
+        try:
+            if hasattr(m.par, 'active'):
+                m.par.active = 0
+        except:
+            pass
+
+
+def _restore_cue_vram(cue_op, res_x=1920, res_y=1080):
+    """Restores full resolution and unbypasses an active cue (AAVJ standard)."""
+    if not cue_op or not getattr(cue_op, 'isCOMP', False):
+        return
+    for i in cue_op.findChildren(type=inTOP):
+        try:
+            if hasattr(i.par, 'outputresolution'):
+                i.par.outputresolution = 'useinput'
+            i.bypass = False
+            i.cook()
+        except:
+            pass
+    for r in cue_op.findChildren(type=renderTOP):
+        try:
+            r.par.resolution1 = res_x
+            r.par.resolution2 = res_y
+            r.bypass = False
+            r.cook()
+        except:
+            pass
+    for f in cue_op.findChildren(type=feedbackTOP):
+        try:
+            f.bypass = False
+            f.cook()
+            if hasattr(f.par, 'resetpulse'):
+                f.par.resetpulse.pulse()
+        except:
+            pass
+    for g in cue_op.findChildren(type=geometryCOMP):
+        try:
+            g.bypass = False
+            g.cook()
+        except:
+            pass
+    for m in cue_op.findChildren(type=moviefileinTOP):
+        try:
+            if hasattr(m.par, 'active'):
+                m.par.active = 1
+        except:
+            pass
+
+
 def update_playback():
     pb = _pb()
     tl = _tl()
@@ -495,7 +572,13 @@ def update_playback():
     entered_cues = [c for c in current_active_cues if c.name not in prev_names]
     exited_names = prev_names - cur_names
 
+    # VRAM Collapsing Engine (AAVJ Pattern)
+    mlt_root = op('/Multi_Layer_Timeline')
+    vram_collapse_on = bool(mlt_root.par.Enablevramcollapse.eval()) if mlt_root and hasattr(mlt_root.par, 'Enablevramcollapse') else True
+
     for ec in entered_cues:
+        if vram_collapse_on:
+            _restore_cue_vram(ec, o1w, o1h)
         cmd = str(getattr(ec.par, 'Commandon', '') or '').strip()
         if cmd:
             try:
@@ -506,6 +589,8 @@ def update_playback():
     for ex_name in exited_names:
         c_op = cues_comp.op(ex_name) if cues_comp else None
         if c_op is not None:
+            if vram_collapse_on:
+                _collapse_cue_vram(c_op)
             cmd = str(getattr(c_op.par, 'Commandoff', '') or '').strip()
             if cmd:
                 try:

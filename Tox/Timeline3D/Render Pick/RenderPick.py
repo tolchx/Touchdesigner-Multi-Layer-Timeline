@@ -465,9 +465,23 @@ class RenderPick:
 			ext.Selection.Selection.clear()
 			ext.Selection.DoSelection(ext.Selection.Selection, ext.Selection.OldSelection, select = True)
 			selectedItem = None
+			try:
+				tf = op('/Multi_Layer_Timeline/UI/table_focuspath')
+				if tf:
+					tf[0, 0] = '/Multi_Layer_Timeline'
+				parent.Timeline.par.Settingscomp = parent.Timeline.path
+			except:
+				pass
 			return
 
 		self.ParComp.par.op = selectedItem
+		try:
+			tf = op('/Multi_Layer_Timeline/UI/table_focuspath')
+			if tf and selectedItem:
+				tf[0, 0] = selectedItem.path
+				parent.Timeline.par.Settingscomp = selectedItem.path
+		except:
+			pass
 
 		if not self.System.Multiselect.eval() and not self.KeyboardOp.par.Shift.eval():
 			ext.Selection.Selection = [selectedItem]
@@ -507,6 +521,13 @@ class RenderPick:
 						ext.Selection.DoSelection(ext.Selection.Selection, select=True)
 						selectedItem = clones[0]
 						self.ParComp.par.op = selectedItem
+		try:
+			tf = op('/Multi_Layer_Timeline/UI/table_focuspath')
+			if tf and selectedItem:
+				tf[0, 0] = selectedItem.path
+				parent.Timeline.par.Settingscomp = selectedItem.path
+		except:
+			pass
 
 			# Dynamic cursor feedback
 			t3d = self.MainOp

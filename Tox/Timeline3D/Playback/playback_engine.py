@@ -874,18 +874,20 @@ def update_playback():
     # Update preview header text
     mlt = tl.parent()
     if mlt is not None:
-        hdr = mlt.op('container_Preview/text_header')
+        hdr = mlt.op('container_Preview/header_bar/text_live_info')
+        if hdr is None:
+            hdr = mlt.op('container_Preview/text_header')
         if hdr is not None:
             prev_mode = str(mlt.op('container_Preview').par.Previewmode.eval()) if hasattr(mlt.op('container_Preview').par, 'Previewmode') else 'out1'
             if prev_mode == 'out2':
                 out_t = mlt.op('Timeline3D/out2')
-                prefix = "OUTPUT 2 PREVIEW"
+                prefix = "OUT 2 PREVIEW"
             elif prev_mode == 'split':
                 out_t = mlt.op('container_Preview/layout_split')
-                prefix = "DUAL OUTPUT PREVIEW (SPLIT)"
+                prefix = "SPLIT PREVIEW"
             else:
                 out_t = mlt.op('Timeline3D/out1')
-                prefix = "OUTPUT 1 PREVIEW"
+                prefix = "OUT 1 PREVIEW"
 
             res_str = f'{out_t.width}x{out_t.height}' if out_t is not None else '1920x1080'
             if active_by_layer:
@@ -896,8 +898,8 @@ def update_playback():
                     l_comp = layers_comp.op(f'base_Layer{lidx}') if layers_comp else None
                     l_out = str(l_comp.par.Output.eval()) if l_comp and hasattr(l_comp.par, 'Output') else 'out1'
                     active_names.append(f'{c_title} [L{lidx} → {l_out.upper()}]')
-                label = f"{prefix}  •  {res_str}  •  LIVE: {', '.join(active_names)}"
+                label = f"{prefix}   •   {res_str}   •   ● LIVE: {', '.join(active_names)}"
             else:
-                label = f"{prefix}  •  {res_str}  •  NEGRO (Sin Cue Activo)"
+                label = f"{prefix}   •   {res_str}   •   ○ IDLE"
             if hdr.par.text.val != label:
                 hdr.par.text = label

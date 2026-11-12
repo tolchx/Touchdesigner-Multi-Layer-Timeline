@@ -102,6 +102,13 @@
 - **Dynamic VRAM Collapsing Engine (`playback_engine.py`):** Automatic memory purger shrinking inactive `renderTOP`s to 1x1px, `inTOP`s to 1/8th resolution, and bypassing idle geometry to save gigabytes of VRAM during large multi-scene shows. Governed by root parameter page `Performance` (`Enable VRAM Collapse`).
 - **Live GPU Telemetry HUD (`container_GPUStats`):** Monospace real-time monitor docked on the transport bar displaying `cookrate`, frame time (`ms`), and percentage of GPU VRAM used with an automatic alert color switch when VRAM exceeds 85%.
 
+### 10. v2.0 UI Modernization & Pro Precision Workstation
+- **Top Application Ribbon (`ui_taskbar`):** Dedicated top bar with brand badge, dynamic engine state LED (Green = Playing, Amber = Paused, Slate = Stopped), real-time session readout (`v2.toe • 60 FPS • Duration`), fullscreen toggle, project save button, and 3 layout presets (`STANDARD`, `TIMELINE FOCUS`, `PREVIEW FOCUS`).
+- **Universal Inspector Header (`container_InspectorHeader`):** Quick-action bar docked directly above `parameter1` featuring active target breadcrumb, 7 instant 1-click cue color swatches (`DefaultBlue`, `EmeraldGreen`, `AmberGold`, `VioletMagenta`, `CrimsonRed`, `CyanElectric`, `DarkSlate`), and quick editing tools (`DUP`, `CUT`, `DEL`).
+- **Tactile Transport Surface & Loop Engine (`btn_Loop`):** Transport ribbon standardized with uniform 1px micro-borders (`outline_static`), hover illumination, and dedicated `LOOP` toggle button for seamless timeline cycling.
+- **Output Preview Monitor Modernization (`container_Preview`):** Pinned header with segmented output mode selectors (`OUT 1`, `OUT 2`, `SPLIT`) and live stream/cue overlay text.
+- **Unified 1px Geometric Micro-Borders:** Applied systematically across `container_Timecode`, `container_Duration`, `container_AudioHeader`, `container_AudioTrack`, `LayerSettings`, `Timeline3D`, and `container_RangeSlider` creating a cohesive pro DAW visual language.
+
 ---
 
 ## Keyboard Shortcuts Reference

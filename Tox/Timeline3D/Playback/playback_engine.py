@@ -572,6 +572,12 @@ def update_playback():
     entered_cues = [c for c in current_active_cues if c.name not in prev_names]
     exited_names = prev_names - cur_names
 
+    # Output master resolutions (resolved before VRAM restore)
+    o1w = int(pb.par.Out1resw.eval()) if hasattr(pb.par, 'Out1resw') else 1920
+    o1h = int(pb.par.Out1resh.eval()) if hasattr(pb.par, 'Out1resh') else 1080
+    o2w = int(pb.par.Out2resw.eval()) if hasattr(pb.par, 'Out2resw') else 1920
+    o2h = int(pb.par.Out2resh.eval()) if hasattr(pb.par, 'Out2resh') else 1080
+
     # VRAM Collapsing Engine (ProSlate Pattern)
     mlt_root = op('/Multi_Layer_Timeline')
     vram_collapse_on = bool(mlt_root.par.Enablevramcollapse.eval()) if mlt_root and hasattr(mlt_root.par, 'Enablevramcollapse') else True
@@ -616,12 +622,6 @@ def update_playback():
     do_preload = bool(pb.par.Preload.eval())
 
     new_active_scenes = set()
-
-    # Output master resolutions
-    o1w = int(pb.par.Out1resw.eval()) if hasattr(pb.par, 'Out1resw') else 1920
-    o1h = int(pb.par.Out1resh.eval()) if hasattr(pb.par, 'Out1resh') else 1080
-    o2w = int(pb.par.Out2resw.eval()) if hasattr(pb.par, 'Out2resw') else 1920
-    o2h = int(pb.par.Out2resh.eval()) if hasattr(pb.par, 'Out2resh') else 1080
 
     for slot_idx in range(total_slots):
         if slot_idx >= len(layer_order):

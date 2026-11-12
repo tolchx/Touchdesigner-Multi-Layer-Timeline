@@ -81,6 +81,10 @@ class RenderPick:
 		self.CanDragVertically = True
 		self.CanStretch = False
 		self.CanStretchLeft = False
+		self.CanTrimLoopLeft = False
+		self.CanTrimLoopRight = False
+		self.InitialTrimStart = []
+		self.InitialTrimEnd = []
 		self.CanTranslate = True
 
 		self.VerticalDragRegion = (.2, .8)
@@ -374,29 +378,53 @@ class RenderPick:
 				by0 = by1 - 0.28
 				is_scene_btn = (self.ClickType == 1 and w_norm >= 0.48 and bx0 <= p_x <= bx1 and by0 <= p_y <= by1)
 
+			is_ctrl = bool(self.KeyboardOp.par.Ctrl.eval()) if hasattr(self.KeyboardOp.par, 'Ctrl') else False
+
 			if is_scene_btn:
 				open_scene_item = selectedItem
 				self.IsTimelineItem = False
 				self.CanStretch = False
 				self.CanStretchLeft = False
+				self.CanTrimLoopLeft = False
+				self.CanTrimLoopRight = False
 				self.CanDragVertically = False
 				self.CanTranslate = False
 			elif is_right_edge:
 				self.IsTimelineItem = True
-				self.CanStretch = True
-				self.CanStretchLeft = False
+				if is_ctrl:
+					self.CanTrimLoopRight = True
+					self.CanTrimLoopLeft = False
+					self.CanStretch = False
+					self.CanStretchLeft = False
+					self.InitialTrimEnd = [float(obj.par.Trimend.eval()) if hasattr(obj.par, 'Trimend') else 0.0 for obj in ext.Selection.Selection]
+				else:
+					self.CanTrimLoopRight = False
+					self.CanTrimLoopLeft = False
+					self.CanStretch = True
+					self.CanStretchLeft = False
 				self.CanDragVertically = False
 				self.CanTranslate = False
 			elif is_left_edge:
 				self.IsTimelineItem = True
-				self.CanStretch = False
-				self.CanStretchLeft = True
+				if is_ctrl:
+					self.CanTrimLoopLeft = True
+					self.CanTrimLoopRight = False
+					self.CanStretch = False
+					self.CanStretchLeft = False
+					self.InitialTrimStart = [float(obj.par.Trimstart.eval()) if hasattr(obj.par, 'Trimstart') else 0.0 for obj in ext.Selection.Selection]
+				else:
+					self.CanTrimLoopLeft = False
+					self.CanTrimLoopRight = False
+					self.CanStretch = False
+					self.CanStretchLeft = True
 				self.CanDragVertically = False
 				self.CanTranslate = False
 			else:
 				self.IsTimelineItem = True
 				self.CanStretch = False
 				self.CanStretchLeft = False
+				self.CanTrimLoopLeft = False
+				self.CanTrimLoopRight = False
 				self.CanDragVertically = True
 				self.CanTranslate = True
 
@@ -567,8 +595,37 @@ class RenderPick:
 				# base_Snapping parameters bypassed for smooth 60 FPS translation
 				pass
 
+				# Loop In Trim Drag (Ctrl + Left Edge)
+				if getattr(self, 'CanTrimLoopLeft', False):
+					for ind, obj in enumerate(ext.Selection.Selection):
+						if obj.par.Lock.eval():
+							continue
+						init_ts = self.InitialTrimStart[ind] if hasattr(self, 'InitialTrimStart') and ind < len(self.InitialTrimStart) else float(obj.par.Trimstart.eval())
+						new_ts = max(0.0, init_ts + delta_x)
+						curr_te = float(obj.par.Trimend.eval()) if hasattr(obj.par, 'Trimend') else 0.0
+						if curr_te > 0.0:
+							new_ts = min(curr_te - 0.05, new_ts)
+						obj.par.Trimstart = round(new_ts, 3)
+						if hasattr(obj.par, 'Loop') and not obj.par.Loop.eval():
+							obj.par.Loop = True
+
+				# Loop Out Trim Drag (Ctrl + Right Edge)
+				elif getattr(self, 'CanTrimLoopRight', False):
+					for ind, obj in enumerate(ext.Selection.Selection):
+						if obj.par.Lock.eval():
+							continue
+						init_te = self.InitialTrimEnd[ind] if hasattr(self, 'InitialTrimEnd') and ind < len(self.InitialTrimEnd) else float(obj.par.Trimend.eval())
+						if init_te <= 0.0:
+							init_te = float(obj.par.Cuelength.eval())
+						new_te = max(0.05, init_te + delta_x)
+						curr_ts = float(obj.par.Trimstart.eval()) if hasattr(obj.par, 'Trimstart') else 0.0
+						new_te = max(curr_ts + 0.05, new_te)
+						obj.par.Trimend = round(new_te, 3)
+						if hasattr(obj.par, 'Loop') and not obj.par.Loop.eval():
+							obj.par.Loop = True
+
 				# 1. Right-edge Stretch (modify Cuelength, keep Starttime fixed)
-				if getattr(self, 'CanStretch', False):
+				elif getattr(self, 'CanStretch', False):
 					primary = ext.Selection.Selection[0]
 					orig_st0 = self.StartTimes[0] if len(self.StartTimes) > 0 else primary.par.Starttime.eval()
 					orig_du0 = self.Durations[0] if len(self.Durations) > 0 else primary.par.Cuelength.eval()
@@ -653,6 +710,8 @@ class RenderPick:
 		self._HideSnapLine()
 		self.CanStretch = False
 		self.CanStretchLeft = False
+		self.CanTrimLoopLeft = False
+		self.CanTrimLoopRight = False
 		self.CanTranslate = False
 		self.CanDragVertically = False
 

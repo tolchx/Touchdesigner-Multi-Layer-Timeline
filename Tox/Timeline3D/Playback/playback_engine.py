@@ -336,6 +336,13 @@ def _compute_media_time(info, cue, local_t):
         return trim_start + eff_local_t
     if length_val == 1.0:
         return 0.0
+
+    # General cue fallback (Scene, generative, or media without info)
+    loop = bool(cue.par.Loop.eval()) if hasattr(cue.par, 'Loop') else False
+    if loop and trim_end > trim_start:
+        loop_span = max(0.001, trim_end - trim_start)
+        return trim_start + (eff_local_t % loop_span)
+
     return trim_start + eff_local_t
 
 

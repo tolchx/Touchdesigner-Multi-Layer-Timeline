@@ -20,6 +20,7 @@ This document serves as the persistent knowledge base and operational manual for
 - All cues, layer tracks, playhead, and grid lines are rendered in a **3D GPU instanced environment** (`Geometry COMP` + instancing tables/CHOPs).
 - **Dual Camera Setup:**
   - `cam1` (`Timeline3D/Render/cam1`): Main timeline camera. Controls horizontal zoom/pan (`tx`, `sx`) and vertical scroll (`ty`).
+    - **Zoom invariant:** `sx = op('null_CamScale')['Scale']` (the visible-fraction range published by `base_GetCamScale`; `Scale == 1` shows the whole timeline). Do not replace it with a constant — the layout is already normalised by `Scale`, so a constant `sx` makes the wheel scroll compress the timeline instead of zooming it. `tx = op('null_FinalCamTX')['CamTX']` and `ty = op('null_CamYPos')['Camypos']` are filtered CHOP chains: after changing the range programmatically, wait ~2 s (real time) before capturing, or `tx` is still stale and the frame is off-centre.
   - `cam_LayerSettings` (`Timeline3D/Render/cam_LayerSettings`): Orthographic camera locked to track headers on the left sidebar.
 - **Picking via `RenderPick`:** User interactions are resolved by querying `instance id` directly on GPU render buffers.
 
@@ -106,6 +107,57 @@ This document serves as the persistent knowledge base and operational manual for
 - **Right Edge Drag ($\ge \text{width} - 6$px):** Trims cue duration (`CanStretch`).
 - **Body Drag:** Translates cue across time and layers.
 - **Click Precedence:** Edge trimming takes strict priority over scene open buttons to prevent accidental window popups.
+
+### ProSlate Theme System (`UI/colors` + `scripts/apply_ui_theme.py` + `scripts/apply_row_stripes.py`)
+
+**Single source of truth:** `Multi_Layer_Timeline/UI/colors` → `table_colors` (columns `name, r, g, b, a, hex`), published through its `out` DAT. Never hardcode a UI colour that already has a token: bind an expression to
+`op('/Multi_Layer_Timeline/UI/colors/out')['<token>', 'r'].val` (also `'g'`, `'b'`, `'a'`).
+Do **not** use or edit `/ui/colors` at the project root — that is TouchDesigner's own internal palette, unrelated to this system.
+
+**Tokens added by the ProSlate restyle** (15 of the 39 tokens; `table_colors` has 40 rows including its header. The other 24 predate the restyle and keep their names/values):
+
+| token | hex | used by |
+|---|---|---|
+| `canvas_bg` | `#08090a` | timeline background plane (flat constant material) |
+| `grid_line` | `#202226` | grid / row separator lines (`Canvas/constant2`) |
+| `playhead` | `#73dbeb` | playhead bar (`Canvas/constant1`) |
+| `snap_accent` | `#47758a` | snapping line (`Canvas/line1`, was red) |
+| `cue_default` | `#1d3340` | default cue card fill / preset `DefaultBlue` |
+| `cue_outline` | `#2b333b` | idle cue outline reference (shader uses `0.190,0.222,0.255`, see below) |
+| `cue_outline_sel` | `#bfe6f0` | selected cue outline reference (shader `0.749,0.902,0.941`) |
+| `cue_outline_multi` | `#e0bf4a` | reserved for multi-selection; **not drawn yet** — shader index 2 reuses the selection cyan |
+| `ruler_text` | `#858f99` | ruler label tint |
+| `row_alt` | `#0e0f12` | alternate-row striping |
+| `layer_accent_1..5` | `#547885` `#b89438` `#735c94` `#47856b` `#a85c57` | per-layer accent rail (cycled by card index `% 5`) |
+
+**Materials / nodes that implement the look**
+
+- `Timeline3D/Canvas/mat_canvas_bg` — `constantMAT`, flat `canvas_bg` fill for the timeline backdrop (pass 1). Kept in the comp as the plain fallback material.
+- `Timeline3D/Canvas/glsl_mat_canvas` (+ `glsl_canvas_vertex`, `glsl_canvas_pixel`) — alternate-row striping. Since pass 2 it is the material on `geo_Timeline_Bg`. Bands are computed in **world space** from `iVert.worldSpacePos.y` (no UVs, no extra geometry), with `uRows ← ipar.UserSettings.Layercount`, `uLower ← ipar.SystemSettings.Computedlowerbounds`, `uRowH ← ipar.SystemSettings.Computedlayerheight`, `uBase ← canvas_bg`, `uAlt ← row_alt`. Layer count/height changes are picked up automatically — do not duplicate the striping with geometry.
+- `Timeline3D/Layers/Template_layer1` and `base_Layer0..4` — per-layer accent rail: `glsl_accent` (glslTOP, fixed 256×256, `uColor ← layer_accent_N` derived from the card name, `uWidth = 0.040`) → `over_accent` (overTOP) between `over1` and `null_bg`. The rail writes **premultiplied** colour (`rgb * alpha`) because `overTOP` expects premultiplied input; without it the whole card tints.
+
+**Scripts** (run inside TouchDesigner through TDMCP, both idempotent — re-running re-applies values and never stacks ops):
+
+1. `python scripts/td_client.py scripts/apply_ui_theme.py` — pass 1: tokens, canvas/grid/playhead/snap, cue shader patch, ruler tint, 3D typography, cue palette map + migration of already-coloured cues, 2D buttons, duration card, audio header, duration popup, inspector swatches.
+2. `python scripts/td_client.py scripts/apply_row_stripes.py` — pass 2: `row_alt` + `layer_accent_*`, striping material, accent rails, demo captures to `tmp/`.
+
+Order matters (pass 2 replaces the background material installed by pass 1). Both end by writing before/after captures to `tmp/` through a hardcoded absolute path — update it if the repository moves. Neither script saves anything: after re-styling, save bottom-up (`scripts/save_bottom_up.py`) or the look is lost when TouchDesigner closes. The restyle lives in `Tox/Timeline3D/Canvas/Canvas.tox`, `.../Layers/Layers.tox`, `.../Cues/Cues.tox`, `.../Render/Render.tox` and `Tox/UI/UI.tox`.
+
+**Deliberately hardcoded** (there is no token access from inside GLSL, or the value is coupled to geometry):
+
+- `Timeline3D/Cues/phong1GLSL_CueMatPixel`: outline width `.022`, selection colours `vec3(0.190,0.222,0.255)` (idle) / `(0.749,0.902,0.941)` (index 1 **and** index 2, so multi-selection is not visually distinct yet), badge `(0.059,0.071,0.086)`, wire icon colours, vertical shade `mix(0.88, 1.07, …)`. These are patched as text by `apply_ui_theme.py` (`CUE_SHADER_*`, `BADGE_*`, `ICON_*`) — a palette change means editing those blocks and re-running; the idle literal is close to but not identical to the `cue_outline` token, so keep them in sync by hand.
+- `geo_TimeIcons/phong4GLSLVertex`: `gl_PointSize = 70.` — the glyph atlas layout is coupled to this sprite size, **do not resize** it to fit more labels (adjust the ruler thresholds instead, see below). The label tint is the literal `outcol.rgb *= vec3(0.560, 0.600, 0.640)` in `phong4GLSLPixel`.
+- 3D typography: font `Bahnschrift Condensed` everywhere; layer label 11.5 px `(0.62,0.66,0.72)` at `positionx 0.075`; cue title 26 px `(0.88,0.91,0.94)`.
+- Cue preset map is duplicated: `COLOR_MAP` inside `Timeline3D/Cues/parexec_cue_colors` **and** `CUE_NEW`/`CUE_OLD` in `apply_ui_theme.py` (the old values are only used to migrate cues painted before the restyle). Change both, otherwise menu presets and existing cues drift apart.
+- 2D chrome label colours are literal greys, e.g. `(0.72,0.78,0.84)` on duration buttons, `(0.42,0.44,0.46)` on `text_dur_label`, `(0.70,0.32,0.32)` on `text_Clear`, `(0.78,0.82,0.86)` on popup rows.
+- Accent rail `uWidth = 0.040` and its 256×256 resolution; fixed resolution is mandatory (see Contract 1) — never switch these TOPs to `parpanel`.
+
+**Related but separate:** ruler label *density* is not part of the theme. It is driven by the 16 `uBecomesVisibleAt` presets in `Timeline3D/Canvas/base_Settings_Processing/base_GetPattern` (`datto2_10Sec` … `datto_1200Min`, backed by `table1..15`), selected by `switch1`:
+
+- Rule for every preset: threshold = 1.5 × class interval, so a class of interval `I` only draws while `uStepValue <= 1.5·I` and labels stay ≥ ~70 px apart.
+- `switch1.index` is an expression on `uStepValue` that picks the preset whose nominal step is the smallest one `>=` the current step (6 % tolerance, because the step lands slightly above the nominal — 30.03 for the 30 s band). Verified: step 8.75 → `10Sec` (10 s labels), 30.03 → `30Sec` (30 s), 57 → `60Sec` (1 m).
+- Scripts: `scripts/apply_ruler_thresholds.py` (single active preset) and `scripts/wire_ruler_presets.py` (normalises all 16 and installs the expression; idempotent).
+- Do **not** fix label crowding by shrinking `gl_PointSize`; the glyph atlas is coupled to 70 px.
 
 ---
 
